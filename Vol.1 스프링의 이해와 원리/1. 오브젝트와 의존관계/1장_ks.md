@@ -166,11 +166,11 @@ why? 초기 대규모 서버 시스템을 위해 설계된 스프링은, 요청�
 3. 빈의 의존 오브젝트 : 생성자나 수정자 메소드를 통해 의존 오브젝트를 넣어준다.
 4. 수정자 메소드는 set을 제외한 나머지가 프로퍼티가 된다.
 
-|info|자바 코드 설정 정보 | xml 설정 정보|
-|-----|-—--------------|—----------|
-|빈 설정 파일|@configuration|<beans>|
-|빈의 이름|@Bean methodName()|<bean id=“methodName”|
-|빈의 클래스|return new BeanClass();|class=“a.b.c...BeanClass”>| <br/>
+info | 자바 코드 설정 정보 | xml 설정 정보
+--- | -—- | —--
+빈 설정 파일 | @configuration | <beans>
+빈의 이름 | @Bean methodName() | <bean id=“methodName”
+빈의 클래스 | return new BeanClass(); | class=“a.b.c...BeanClass”>
 이때 빈의 클래스는 오브젝트를 만들 때 사용하는 클래스 이름이다.  메소드의 리턴 타입을 class 애트리뷰트에 사용하지 않는다.(? 뭐가 다른거지?)
 
 <property name = “connectionMaker” ref=“connectionMaker”/>
