@@ -728,3 +728,356 @@ public class UserDao {
 - 요청 스코프: 웹을 통해 새로운 HTTP 요청이 생길때마다 생성된다.
 - 세션 스코프: 웹의 세션과 스코프가 유사하다. 
 
+## 1.7 의존관계 주입
+
+### 1.7.1 제어의 역전(IoC)과 의존관계 주입
+
+스프링 IoC 기능의 대표적인 동작원리는 주로 의존관계 주입이라고 불린다. 이것이 스프링이 다른 프레임워크와 차별화돼서 제공해주는 기능이다. 요즘은 스프링을 DI 컨테이너라고 부르기도 한다. 
+
+
+
+### 1.7.2 런타임 의존관계 설정
+
+#### 의존관계
+
+두 개의 클래스가 의존관계에 있다고 말할 때는 방향성을 부여해줘야 한다. 
+
+
+
+A -------------> B 
+
+- A가 B에 의존하고 있음을 나타낸다. 
+- 의존한다는 건 의존대상, 여기서는 B가 변하면 그것이 A에 영향을 미친다는 뜻이다. 
+- 대표적인 예는 A가 B를 사용하는 경우, 예를 들어서 A에서 B에 정의된 메소드를 호출해서 사용하는 경우이다. 
+
+
+
+#### UserDao의 의존관계
+
+UserDao가 ConnectionMaker 인터페이스에 의존하고 있는 형태에서, 
+
+- ConnectionMaker 인터페이스가 변하면 UserDao도 직접적으로 영향을 받는다.
+- 하지만 ConnectionMaker를 구현한 DConnectionMaker가 변했을 경우에는 UserDao가 영향을 받지 않는다.
+
+"인터페이스에 대해서만 의존관계를 만들어두면 인터페이스 구현 클래스와의 관계는 느슨해지면서 변화에 영향을 덜 받는 상태가 된다. "
+
+
+
+인터페이스를 통해 설계 시점에 느슨한 의존관계를 갖는 경우에는 UserDao의 오브젝트가 런타임 시에 사용할 오브젝트가 어떤 클래스로 만든 것인 지 미리 알 수가 없다. 이 때 프로그램이 실행되고 UserDao의 오브젝트가 만들어지고 나서 런타임 시에 의존관계를 맺는 대상, 즉 실제 사용대상인 오브젝트를 <B>의존 오브젝트</B>라고 한다. 
+
+
+
+<B>의존관계 주입은 구체적인 의존 오브젝트(:DConnectionMaker)와 그것을 사용할 주체, 보통 클라이언트(UserDao)라고 부르는 오브젝트를 런타임 시에 연결해주는 작업을 말한다. </B>
+
+의존관계 주입이란, 아래 조건을 충족하는 작업을 말한다. 
+
+- 클래스 모델이나 코드에는 런타임 시점의 의존관계가 드러나지 않는다. 그러기 위해서는 인터페이스에만 의존하고 있어야 한다.
+- 런타임 시점의 의존관계는 컨테이너나 팩토리 같은 제 3의 존재가 결정한다. 
+- 의존관계는 사용할 오브젝트에 대한 레퍼런스를 외부에서 제공(주입)해줌으로써 만들어진다. 
+
+
+
+#### UserDao의 의존관계 주입
+
+DaoFactory를 만든 시점에서 의존관계주입을 이용한 셈이다. 
+
+DaoFactory는 
+
+- 두 오브젝트 사이의 런타임 의존관계를 설정해주는 의존관계 주입작업을 주도하는 존재이며
+- 동시에 IoC 방식으로 오브젝트의 생성과 초기화, 제공 등의 작업을 수행하는 컨테이너이다. 
+- 아무튼 DI 컨테이너다!
+- DI 컨테이너는 UserDao를 만드는 시점에서 생성자의 파라미터로 이미 만들어진 DConnectionMaker의 오브젝트를 전달한다. 정확히는 DConnectionMaker 오브젝트의 레퍼런스가 전달되는 것이다. 
+
+
+
+### 1.7.3 의존관계 검색과 주입
+
+의존관계 검색(DL)이란, 의존관계를 맺으려 할 때 스스로 검색해서 자신이 필요로하는 의존 오브젝트를 능동적으로 찾는 방식을 말한다. 런타임 시 의존관계를 맺을 오브젝트를 결정하는 것과 오브젝트의 생성 작업은 외부 컨테이너에게 IoC로 맡기지만 이를 가져올 때는 메소드나 생성자를 통한 주입 대신 스스로 컨테이너에게 요청을 해서 가져온다. 
+
+```
+public UserDao() {
+	UserFactory daoFactory = new DaoFactory();
+	this.connectionMaker = daoFactory.connectionMaker();
+}
+```
+
+
+
+스프링의 애플리케이선 컨텍스트의 경우라면 미리 정해놓은 이름을 전달해서 그 이름에 해당하는 오브젝트를 찾게 된다. 애플리케이션 컨텍스트는 getBean()이라는 의존관계 검색에 사용되는 메소드를 제공한다. 
+
+```
+public UserDao() {
+	AnnotationConfigApplicationContext context = new AnnotationConfigApplication(DaoFactory.class);
+	this.connectionMaker = context.getBean("connectionMaker", ConnectionMaker.class);
+}
+```
+
+
+
+의존관계 검색보다는 의존관계 주입이 훨씬 단순하고 깔끔해서 주입을 사용하는 것이 낫지만, 의존관계 검색 방식을 사용해야할 경우가 있다. 애플리케이션 기동 시점에서는 적어도 한 번 의존관계 검색 방식을 사용해서 오브젝트를 가져와야 한다. 스태틱 메소드인 main()에서는 DI를 이용해서 오브젝트를 주입받을 방법이 없기 때문이다. 
+
+
+
+<B>DI vs DL</B>
+
+의존관계 검색 방식에서는 검색하는 오브젝트는 자신이 스프링의 빈일 필요가 없다. 
+
+의존관계 주입 방식에서는 주입을 원하는 오브젝트는 자신이 먼저 스프링의 빈이 되어야 한다. 
+
+
+
+### 1.7.4 의존관계 주입의 응용
+
+TODO
+
+
+
+### 1.7.5 메소드를 이용한 의존관계 주입
+
+- 수정자 메소드를 이용한 주입
+  - set으로 시작해야 하고 한 번에 한 개의 파라미터만 가질 수 있는 메소드.
+  - 외부에서 오브젝트 내부의 애트리뷰트 값을 변경하려는 용도로 주로 사용된다. 
+  - 부가적으로 입력 값에 대한 검증이나 그 밖의 작업을 수행할 수도 있다. 
+
+- 일반 메소드를 이용한 주입
+  - 여러 개의 파라미터를 가질 수 있는 메소드
+
+
+
+<B>수정자 메소드를 가장 많이 사용한다.</B>
+
+DaoFactory 같은 자바 코드 대신 XML을 사용하는 경우에는 자바빈 규약을 따르는 수정자 메소드가 가장 사용하기 편하다. 가능한 의미있고 단순한 이름을 사용하거나, 메소드를 통해 DI 받을 오브젝트의 타입 이름을 따르는 것이 가장 무난하다. 
+
+```
+public class UserDao {
+	private ConnectionMaker connectionMaker; 
+	
+	public void setConnectionMaker(ConnectionMaker connectionMaker) {
+		this.connectionMaker = connectionMaker;
+	}
+}
+```
+
+```
+...
+
+@Bean
+public User userDao() {
+	UserDao userDao = new UserDao();
+	userDao.setConnectionMaker(connectionMaker());
+	return userDao; 
+}
+```
+
+
+
+## 1.8 XML을 이용한 설정
+
+스프링은 DaoFactory와 같은 자바 클래스를 이용하는 것 외에도, 다양한 방법을 통해 DI 의존관계 설정정보를 만들 수 있다. 가장 대표적인 것이 XML이다. 
+
+
+
+### 1.8.1 XML 설정
+
+@Configuration을 <beans>, @Bean을 <bean>에 대응해서 생각하면 된다. 
+
+> @Bean 메소드에서 얻을 수 있는 빈의 DI 정보
+>
+> - 빈의 이름: @Bean 메소드 이름이 빈의 이름이다. 이 이름은 getBean()에서 사용된다.
+> - 빈의 클래스: 빈 오브젝트를 어떤 클래스를 이용해서 만들지를 정의한다.
+> - 빈의 의존 오브젝트: 빈의 생성자나 수정자 메소드를 통해 의존 오브젝트를 넣어준다. 의존 오브젝트도 하나의 빈이므로 이름이 있을 것이고, 그 이름에 해당하는 메소드를 호출해서 의존 오브젝트를 가져온다. 의존 오브젝트는 하나 이상일 수도 있다. 
+
+
+
+#### connectionMaker() 전환
+
+```
+@Bean -----------------------------------> <bean
+public ConnectionMaker
+connectionMaker() { --------------> id="connectionMaker"
+	return new DConenctionMaker(); -> class="com.sh.dao.DConnectionMaker" />
+}
+```
+
+
+
+#### userDao() 전환
+
+```
+<bean id="userDao" class="com.sh.dao.UserDao">
+	<property name="connectionMaker" ref="connectionMaker" />
+</bean>
+```
+
+
+
+#### XML의 의존관계 주입 정보
+
+```
+<beans>
+	<bean id="connectionMaker" class="com.sh.dao.DConnectionMaker" />
+	<bean id="userDao" class="com.sh.dao.UserDao">
+		<property name="connectionMaker" ref="connectionMaker" />
+		//name: DI에 사용할 수정자 메소드의 프로퍼티 이름
+		//ref: 주입할 오브젝트를 정의한 빈의 ID
+	</bean>
+</beans>
+```
+
+
+
+### 1.8.2 XML을 이용하는 애플리케이션 컨텍스트
+
+```
+### applicationContext.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/shcma/beans/spring-beans-3.0.xsd">
+	<bean id="connectionMaker" class="com.sh.dao.DConnectionMaker" />
+	<bean id="userDao" class="com.sh.dao.UserDao">
+		<property name="connectionMaker" ref="connectionMaker" />
+		//name: DI에 사용할 수정자 메소드의 프로퍼티 이름
+		//ref: 주입할 오브젝트를 정의한 빈의 ID
+	</bean>
+</beans>
+```
+
+```
+ApplicationContext context = new GenericXmlApplicationContext("applicationContext.xml")
+```
+
+
+
+### 1.8.3 DataSource 인터페이스로 변환
+
+#### DataSource 인터페이스 적용
+
+자바에서는 DB 커넥션을 가져오는 오브젝트의 기능을 추상화해서 비슷한 용도로 사용할 수 있게 만들어진 DataSource라는 인터페이스가 이미 존재한다. 다양한 방법으로 DB 연결과 풀링 기능을 갖춘 많은 DataSource 구현 클래스가 존재하고, 이를 가져다 사용하면 된다. 
+
+```
+pakage javax.sql
+
+public interface DataSource extends CommonDataSource, Wrapper {
+	Connection getConnection() throws SQLException;
+	...
+}
+```
+
+```
+import javax.sql.DataSource;
+
+public class UserDao {
+	private DataSource dataSource;
+	
+	public void setDataSource(DataSource dataSource) {
+		this.dataSource = dataSource;
+	}
+	
+	public void add(User user) throws SQLException {
+		Connection c = dataSource.getConnection();
+		...
+	}
+}
+```
+
+
+
+#### 자바 코드 설정 방식
+
+DacFactory 설정 방식을 사용해서 기존의 connectionMaker() 메소드를 dataSource()로 변경하고 SimpleDriverDataSource를 리턴하게 하자!
+
+```
+@Bean
+public DataSource dataSource {
+	//DataSource 구현 클래스 중 테스트 환경에서 간단히 사용할 수 있는 클래스
+	//DB 연결에 필요한 필수 정보만 입력받음
+	SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
+	
+	dataSource.setDriverClass(com.mysql.jdbc.Driver.class);
+	dataSource.setUrl("jdbc:mysql://localhost/sh");
+	dataSource.setUsername("sh");
+	dataSource.setPassword("12345");
+	
+	return dataSource;
+}
+```
+
+```
+@Bean
+public UserDao userDao() {
+	UserDao userDao = new UserDao();
+	userDao.setDataSource(dataSource());
+	return userDao;
+}
+```
+
+SimpleDriverDataSource의 오브젝트를 DI로 주입해서 사용할 수 있는 준비 완료한 것
+
+
+
+#### XML 설정 방식
+
+```
+<bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource" />
+```
+
+
+
+### 1.8.4 프로퍼티 값 주입
+
+```
+### 코드를 통한 DB 연결정보 주입
+
+dataSource.setDriverClass(com.mysql.jdbc.Driver.class);
+dataSource.setUrl("jdbc:mysql://localhost/sh");
+dataSource.setUsername("sh");
+dataSource.setPassword("12345");
+```
+
+```
+### XML을 이용한 DB 연결정보 설정
+
+<property name="driverClass" value="com.mysql.jdbc.Driver" />
+<property name="url" value="jdbc:mysql://localhost/sh" />
+<property name="username" value="sh" />
+<property name="password" value="12345" />
+```
+
+
+
+#### value 값의 자동 변환
+
+어떻게 "com.mysql.jdbc.Driver"라는 스트링 값이 Class 타입의 파라미터를 갖는 수정자 메소드에서 사용될 수 있는 것일까?
+
+- 스프링이 프로퍼티의 값을, 수정자 메소드의 파라미터 타입을 참고로 해서 적절한 형태로 변환해주기 때문이다. setDriverClass() 메소드의 파라미터 타입이 Class 임을 확인하고 "com.mysql.jdbc.Driver" 라는 텍스트 값을 com.mysql.jdbc.Drvier.class 오브젝트로 자동 변경해주는 것이다. 
+
+- 내부적으로 일어나는 작업은 아래와 같다.
+
+  ```
+  Class driverClass = Class.forName("com.mysql.jdbc.Driver");
+  dataSource.setDriverClass(driverClass);
+  ```
+
+- 즉, 스프링은 value에 지정한 텍스트 값을 적절한 자바 타입으로 변환해준다. (기본타입, 오브젝트 타입, 배열타입 전부 가능)
+
+
+
+최종적인 applicationContext!
+
+```
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/shcma/beans/spring-beans-3.0.xsd">
+
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
+  	<property name="driverClass" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost/sh" />
+		<property name="username" value="sh" />
+		<property name="password" value="12345" />
+	</bean>
+  
+	<bean id="userDao" class="com.sh.dao.UserDao">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+</beans>
+```
+
