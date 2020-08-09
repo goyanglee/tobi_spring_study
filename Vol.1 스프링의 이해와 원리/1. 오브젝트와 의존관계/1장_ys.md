@@ -228,7 +228,7 @@ DIP(The Dependency Inversion Principle) : 의존 관계 역전 원칙
 
 : 애플리케이션의 오브젝트들을 구성하고, 그 관계를 정의하는 책임을 맡고 있음. : 애플리케이션의 컴포넌트 역할
 
-![1%E1%84%8C%E1%85%A1%E1%86%BC%20%E1%84%8B%E1%85%A9%E1%84%87%E1%85%B3%E1%84%8C%E1%85%A6%E1%86%A8%E1%84%90%E1%85%B3%E1%84%8B%E1%85%AA%20%E1%84%8B%E1%85%B4%E1%84%8C%E1%85%A9%E1%86%AB%E1%84%80%E1%85%AA%E1%86%AB%E1%84%80%E1%85%A8%2080cdbf62c3c742b6a980d1df4358bb4c/Untitled.png](1%E1%84%8C%E1%85%A1%E1%86%BC%20%E1%84%8B%E1%85%A9%E1%84%87%E1%85%B3%E1%84%8C%E1%85%A6%E1%86%A8%E1%84%90%E1%85%B3%E1%84%8B%E1%85%AA%20%E1%84%8B%E1%85%B4%E1%84%8C%E1%85%A9%E1%86%AB%E1%84%80%E1%85%AA%E1%86%AB%E1%84%80%E1%85%A8%2080cdbf62c3c742b6a980d1df4358bb4c/Untitled.png)
+![1%E1%84%8C%E1%85%A1%E1%86%BC%20%E1%84%8B%E1%85%A9%E1%84%87%E1%85%B3%E1%84%8C%E1%85%A6%E1%86%A8%E1%84%90%E1%85%B3%E1%84%8B%E1%85%AA%20%E1%84%8B%E1%85%B4%E1%84%8C%E1%85%A9%E1%86%AB%E1%84%80%E1%85%AA%E1%86%AB%E1%84%80%E1%85%A8%2080cdbf62c3c742b6a980d1df4358bb4c/Untitled.png](1장_ys/Untitled.png)
 
 ## 1.4.2 오브젝트 팩토리의 활용
 
@@ -442,55 +442,180 @@ public class UserDao{
 
 ## 1.6.3 스프링 빈의 스코프
 
+: 스프링이 관리하는 오브젝트, 즉 빈이 생성되고, 존재하고, 적용되는 범위
+
+기본스코프 : 싱글톤
+
+그 외에는 
+
+프로토타입 스코프: 요청할 때마다 새로운 오브젝트를 생성 
+
+요청 스코프 : 웹을 통해 새로운 HTTP요청이 생길때마다 생성
+
+세션스코프 : 웹의 세션과 유사
+
 # 1.7 의존 관계 주입(DI)
 
 ## 1.7.1 제어의 역전(IOC)과 의존 관계 주입
+
+IOC 방식의 대표적인 동작원리 의존 관계 주입 
+
+그래서 스프링이 명확하게 DI 컨테이너라고 더 많이 불리고 있다.
+
+**Dependency Injection (DI)**
+
+오브젝트 레퍼런스를 외부로부터 제공받고 이를 통ㅎ 여타 오브젝트와 다이내믹하게 의존관계가 맺어지는 것이 핵심.
 
 ## 1.7.2 런타임 의존 관계 설정
 
 ### 의존 관계
 
+A가 B에 의존하고 있을 때 → B가 변하면 A에 영향을 미친다.
+
+ex) A에서 Bdp wjddmlehls apthemfmf ghcnfgotj tkdydgksms ruddn.
+
+의존 관계에는 언제나 방향성이 있다.
+
 ### UserDao의 의존관계
+
+: ConnectionMaker에 의존하지만, 그의 변화에 별로 민감하지않다.
+
+**: 인터페이스에 대해서만 의존관계를 만들어두면 인터페이스 구현 클래스와의 관계는 느슨해지면서 변화에 영향을 덜 받는 상태가 된다. 즉 결합도가 낮다고 설명할 수 있다.  인터페이스를 통해 의존관계를 제한해주면 그만큼 변경에서 자유로워지는 셈이다.**
+
+런타임 시에 오브젝트 사이에서 만들어지는 의존관계
+
+: 즉, 프로그램이 시작되고 UserDao 오브젝트가 만들어지고 나서 런타임시에 의존 관계를 맺는 대상, 실제 사용대상인 오브젝트를 **의존 오브젝트**라고 말한다.
+
+**의존 관계 주입**이란, 이렇게 구체적인 의존 오브젝트와 그것을 사용할 주체, 보통 클라이언트라고 부르는 오브젝트를 런타임시에 연결해주는 작업을 말한다.
+
+- 클래스 모델이나 코드에는 런타임 시점의 의존 관계가 드러나지 않는다. 그러기 위해서는 인터페이스에만 의존하고 있어야 한다.
+- 런타임 시점의 의존 관계는 컨테이너나 팩토리 같은 제 3의 존재가 결정한다.
+- 의존 관계는 사용할 오브젝트에 대한 레퍼런스를 외부에서 제공(주입) 해줌으로써 만들어진다.
 
 ### UserDao의 의존관계 주입
 
+DI 컨테이너는 UserDao를 만드는 시점에서 생성자의 파라미터로 이미 만들어진 DconnectionMaker의 오브젝트를 전달한다.
+
+DI 컨테이너는 자신이 결정한 의존 관계를 맺어줄 클래스의 오브젝트를 만들고 이 생성자의 파라미터로 오브젝트의 레퍼런스를 전달해준다.
+
 ## 1.7.3 의존 관계 검색과 주입
+
+의존 관계 검색(DL)
+
+외부로서의 주입이 아니라, 스스로 검색을 이용 . IOC라고는 할 수 없다.
+
+런타임 시 의존관계를 맺을 오브젝트를 결정하는 것과 오브젝트의 생성작업은 외부 컨테이너에게 IoC로 맡기지만, 이를 가져올 때는 메소드나 생성자를 통한 주입 대신 스스로 컨테이너에게 요청하는 방법을 사용
 
 ## 1.7.4 의존 관계 주입의 응용
 
 ### 기능 구현의 교환
 
+대~충 의존 관계 주입을 통해 운영DB와 LocalDB를 둘다 사용할 때, 매번 코드 수정을 해주지 않아도 된다는 이야기.
+
 ### 부가 기능 추가
+
+커넥션 카운트와 같이.
 
 ## 1.7.5 메소드를 이용한 의존 관계 주입
 
-- 수정자 메소드를 이용한 주입
+의존 관계 주입시 반드시 생성자를 이용해야 하는 것은 아니다.
+
+- 수정자(Setter) 메소드를 이용한 주입
 - 일반 메소드를 이용한 주입
 
 # 1.8 XML을 이용한 설정
 
+DI 의존 관계 설정정보를 만드는 가장 대표적인 방법 XML
+
 ## 1.8.1 XML 설정
 
-### connectionMaker() 전환
-
-### UserDao() 전환
+[문법](https://www.notion.so/e4d497a10a164e588c253e9f1c6361d4)
 
 ### XML의 의존관계 주입 정보
 
+```xml
+<beans>
+    <bean id="connectionMaker" class="com.mesung.toby.ch01toby.dao.DConnectionMaker"/>
+  <bean id="userDao" class="com.mesung.toby.ch01toby.dao.UserDao">
+      <property name="connectionMaker" ref="connectionMaker"/>
+  </bean>
+</beans>
+```
+
 ## 1.8.2 XML을 이용하는 애플리케이션 컨텍스트
+
+애플리케이션 컨텍스트가 사용하는 XML 설정파일의 이름은 관례를 따라 application.xml 이라고 만든다.
 
 ## 1.8.3 DataSource 인터페이스로 변환
 
-### Datasource 인터페이스 적용
+db 정보도 xml 설정으로 
 
 ### 자바 코드 설정 방식
+
+```java
+@Bean
+public UserDao userDao() {
+  UserDao userDao = new UserDao();
+  userDao.setDataSource(dataSource());    //DataSource 타입의 빈을 DI 받음.
+  return userDao;
+}
+
+@Bean
+public DataSource dataSource() {
+  SimpleDriverDataSource dataSource = new SimpleDriverDataSource();
+
+  dataSource.setDriverClass(com.mysql.jdbc.Driver.class);
+  dataSource.setUrl("jdbc:mysql://localhost/mesung");
+  dataSource.setUsername("spring");
+  dataSource.setPassword("book");
+
+  return dataSource;
+
+}
+```
+
+### XML 설정 방식
+
+```xml
+<?xml version=1.0 encoding="UTF-8"?>
+<beans>
+    ...
+
+    <bean id="dataSource" class="org.springframwork.jdbc.datasource.SimpleDrvierDataSource"/>
+
+  ...
+</beans>
+```
 
 ## 1.8.4 프로퍼티 값의 주입
 
 ### 값 주입
 
+코드를 통한 DB 정보 주입
+
+```java
+dataSource.setDriverClass(com.mysql.jdbc.Driver.class);
+dataSource.setUrl("jdbc:mysql://localhost/springbook");
+dataSource.setUsername("spring");
+dataSource.setPassword("book");
+```
+
+XML을 이용한 DB 연결 정보 설정
+
+```xml
+<property name="driverClass"  value="com.mysql.jdbc.Driver"  />
+<property name="url"  value="jdbc:mysql://localhost/springbook"  />
+<property name="username"  value="spring"  />
+<property name="password"  value="book"  />
+```
+
 ### value 값의 자동 변환
+
+```java
+Class drvierClass = Class.forName("com.mysql.jdbc.Driver");
+dataSource.setDriverClass(driverClass);
+```
 
 # 1.9 정리
 
-내용이 정말 재미없어서.. 힘들었다.....
+내용이 정말 재미없어서.. 힘들었다.....가 나의 정리
