@@ -59,7 +59,7 @@ public void deleteAll() throws SQLException {
 
 <B>전략패턴의 구조</B>
 
-(그림 3-2)
+![image](Vol.1 스프링의 이해와 원리/3. 템플릿/3-2_전략패턴의_구조.jpeg)
 
 
 
