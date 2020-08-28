@@ -59,7 +59,7 @@ public void deleteAll() throws SQLException {
 
 <B>전략패턴의 구조</B>
 
-![image](Vol.1 스프링의 이해와 원리/3. 템플릿/3-2_전략패턴의_구조.jpeg)
+![이미지1](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20%EC%8A%A4%ED%94%84%EB%A7%81%EC%9D%98%20%EC%9D%B4%ED%95%B4%EC%99%80%20%EC%9B%90%EB%A6%AC/3.%20%ED%85%9C%ED%94%8C%EB%A6%BF/3%EC%9E%A5_sh/3-2_%E1%84%8C%E1%85%A5%E1%86%AB%E1%84%85%E1%85%A3%E1%86%A8%E1%84%91%E1%85%A2%E1%84%90%E1%85%A5%E1%86%AB%E1%84%8B%E1%85%B4_%E1%84%80%E1%85%AE%E1%84%8C%E1%85%A9.jpeg)
 
 
 
@@ -124,7 +124,7 @@ public void deleteAll() throws SQLException {
 
 ### 3) 전략패턴에 따르면 컨텍스트가 어떤 전략을 사용하게 할 것인가는 컨텍스트를 사용하는 앞단의 클라이언트가 결정하는 게 일반적이다. '2)'의 코드를 컨텍스트/클라이언트로 분리한다. 즉, DeleteAllStatement 전략을 생성하는 부분을 클라이언트의 책임으로 넘긴다. 
 
-(그림 3-3)
+![이미지2](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20%EC%8A%A4%ED%94%84%EB%A7%81%EC%9D%98%20%EC%9D%B4%ED%95%B4%EC%99%80%20%EC%9B%90%EB%A6%AC/3.%20%ED%85%9C%ED%94%8C%EB%A6%BF/3%EC%9E%A5_sh/3-3_%E1%84%8C%E1%85%A5%E1%86%AB%E1%84%85%E1%85%A3%E1%86%A8%E1%84%91%E1%85%A2%E1%84%90%E1%85%A5%E1%86%AB%E1%84%8B%E1%85%A6%E1%84%89%E1%85%A5_%E1%84%8F%E1%85%B3%E1%86%AF%E1%84%85%E1%85%A1%E1%84%8B%E1%85%B5%E1%84%8B%E1%85%A5%E1%86%AB%E1%84%90%E1%85%B3%E1%84%8B%E1%85%B4_%E1%84%8B%E1%85%A7%E1%86%A8%E1%84%92%E1%85%A1%E1%86%AF.jpeg)
 
 
 
