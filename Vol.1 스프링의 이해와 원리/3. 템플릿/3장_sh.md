@@ -215,7 +215,7 @@ public void deleteAll() throws SQLException {
 - 전략클래스로 파라미터 전달이 필요하다면, deleteAll() 메소드가 선언된 클래스에서 사용하는 값을 전달해줄 수 있다. 
 #
 
-# 3.4 컨텍스트와 DI
+## 3.4 컨텍스트와 DI
 
 jdbcContextWithStatementStrategy()는 UserDao 외에 다른 DAO에서도 사용할 수 있기 때문에 별도 클래스로 분리했고, 필요한 파일을 정리하면 아래와 같다. 
 
@@ -223,17 +223,17 @@ jdbcContextWithStatementStrategy()는 UserDao 외에 다른 DAO에서도 사용�
 - UserDao.java : 분리된 JdbcContext를 주입받아서 사용
 - applicationContext.xml : 설정파일
 
+<br/>
 
+> ! UserDao는 인터페이스를 거치지 않고 코드에서 바로 JdbcContext를 사용하고 있다. 둘은 클래스 레벨에서 의존관계가 설정된다. 즉, 스프링 기본 의도와는 다르게 인터페이스를 사용하지 않고 DI를 적용하고 있다. 이것은 엄밀히 말해 온전한 DI라고 할 수는 없지만, DI의 기본은 따른 것으로 본다. 
 
-! UserDao는 인터페이스를 거치지 않고 코드에서 바로 JdbcContext를 사용하고 있다. 둘은 클래스 레벨에서 의존관계가 설정된다. 즉, 스프링 기본 의도와는 다르게 인터페이스를 사용하지 않고 DI를 적용하고 있다. 이것은 엄밀히 말해 온전한 DI라고 할 수는 없지만, DI의 기본은 따른 것으로 본다. 
+> ! 이렇게 인터페이스가 없다는 것은 UserDao와 JdbcContext가 매우 긴밀하게 결합되어 항상 함께 사용되어야 한다는 의미이고, 종종 사용되는 방법이긴 하지만 가장 마지막 단계에 고려해야 하는 방법임을 주의해야한다. 
 
-! 이렇게 인터페이스가 없다는 것은 UserDao와 JdbcContext가 매우 긴밀하게 결합되어 항상 함께 사용되어야 한다는 의미이고, 종종 사용되는 방법이긴 하지만 가장 마지막 단계에 고려해야 하는 방법임을 주의해야한다. 
-
-
+<br/>
 
 ### "인터페이스를 사용하지 않고 DAO와 밀접한 관계를 갖는 클래스를 DI에 적용하는 방법은 두 가지 존재한다. " 
 
-
+<br/>
 
 #### 방법 1 : JdbcContext를 스프링 빈으로 등록해서 UserDao에 주입한다. 
 
@@ -244,14 +244,14 @@ jdbcContextWithStatementStrategy()는 UserDao 외에 다른 DAO에서도 사용�
 > - JdbcContext가 DI를 통해 다른 빈(DataSource)에 의존하고 있기 때문이다. 
 >   - DI를 위해서는 주입되는 오브젝트와 주입받는 오브젝트 양쪽 모두 스프링 빈으로 등록되어야 한다. 스프링이 생성하고 관리하는 IoC 대상이어야 DI에 참여할 수 있다. 
 
-
+<br/>
 
 #### 방법 2 : JdbcContext를 UserDao 내부에서 직접 주입한다. 그러려면?
 
 - 싱글톤으로 만들지 못한다. DAO 마다 하나의 JdbcContext 오브젝트를 갖고 있게 한다. UserDao가 JdbcContext 즉, 자신이 사용할 오브젝트를 직접 만들고 초기화한다. 
 - JdbcContext를 주입하는 부분도 UserDao가 진행한다. 이 때, JdbcContext에 주입해줄 의존 오브젝트인 DataSource는 UserDao가 대신 주입받도록 하면된다. 
 
-
+<br/>
 
 #### * 각각의 장단점 * 
 
