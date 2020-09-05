@@ -86,3 +86,49 @@ DAO 마다 직접 주입한다. JdbcContext가 의존하고 있는 DataSource도
 단점은?
 	1. 여러 오브젝트가 사용하더라도 싱글톤으로 만들 수 없다.
 	2. 수동주입을 위한 별도의 코드(생성자, setter)가 필요하다. 
+
+
+## 템플릿/콜백 패턴
+
+템플릿 : 바뀌지 않는 부분. 컨텍스트 
+콜백 : 자주 바뀌는 부분. functional object 
+![템플릿콜백 그림](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20스프링의%20이해와%20원리/3.%20템플릿/3장_ks/065EA090-73D5-455F-97A6-3B59D60D6035.jpeg)
+
+> 전략패턴(참조 1.3.4) : 전략에 따라 구현 클래스를 바꿔 사용하는 패턴 
+![전략패턴 그림](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20스프링의%20이해와%20원리/3.%20템플릿/3장_ks/0360D33B-F438-47B6-A946-DC120EA9031F.jpeg)
+
+-> 스프링에서는 템플릿/콜백 패턴이라고 한다.
+
+### 특징
+
+1. 일반적으로 단일 메소드 인터페이스를 사용한다.
+-> 보통 특정 기능을 위해 한 번 호출되기 때문이다.
+2. 콜백 인터페이스의 메소드에는 보통 파라미터가 있다 
+-> 컨텍스트 정보를 파라미터로 전달받음
+3. 메소드 레벨의 DI 이다.
+4. 의존하는 오브젝트를 setter로 전달받아두고 사용하는 방식과는 달리, 메소드 단위로 사용할 오브젝트를 새롭게 전달받는다.
+5. 자신을 생성한 클라이언트 메소드 내의 정보를 직접 참조할 수 있다. 강하게 결합되어있다.
+6. 전략 패턴 + DI + 익명 내부클래스 사용
+
+### 단점
+
+1. 매번 익명 내부 클래스 코드를 작성해야한다.
+
+![그림3-7](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20스프링의%20이해와%20원리/3.%20템플릿/3장_ks/5F2242A7-D96E-430E-8C76-A044C8537182.jpeg)
+![그림3-9](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20스프링의%20이해와%20원리/3.%20템플릿/3장_ks/2D64FE22-0045-4BDC-BDB3-82DF3076D35B.jpeg)
+
+### 템플릿/콜백 패턴을 적용시킬 수 있는 것
+
+1. 반복되는 try/catch/finally 구조의 코드
+2. 제네릭스를 이용할 수 있는 것 
+: 리턴타입과 파라미터를 제네릭스 T를 활용한다. 인풋할 때 타입을 지정하면 리턴도 맞는 타입으로 변경되어 나온다.
+
+## 스프링의 템플릿/콜백
+JdbcTemplate를 사용해서 그동안 만들 것들을 대체할 수 있다.
+
+![그림 3-58](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20스프링의%20이해와%20원리/3.%20템플릿/3장_ks/EA28474A-A06C-4606-BE2B-F0654C8F6584.jpeg)
+![그림 3-58 2](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20스프링의%20이해와%20원리/3.%20템플릿/3장_ks/0E000316-6B90-47CD-8CE8-53191CE613D2.jpeg)
+
+### 개선점
+1. userMapper를 DI 로 바꿀 수 있다. 
+2. SQL을 외부에서 가져올 수 있다.
