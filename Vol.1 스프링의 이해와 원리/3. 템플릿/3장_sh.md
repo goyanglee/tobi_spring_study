@@ -263,4 +263,103 @@ _이렇게 인터페이스가 없다는 것은 UserDao와 JdbcContext가 매우 
 - 장점) 관계가 외부에 드러나지 않는다. 
 - 단점) JdbcContext를 여러 오브젝트가 사용하더라도 싱글톤으로 만들 수 없고, DI 작업을 위한 부가적인 코드가 필요하다. 
 
+#
 
+# 3.5 템플릿과 콜백
+
+> ### 템플릿 콜백패턴
+>
+> 스프링에서 부르는, 전략패턴의 기본구조에 익명 내부클래스를 활용한 방식이다. 복잡하지만 바뀌지 않는 일정한 패턴을 갖는 작업흐름이 존재하고 그중 일부분만 자주 바꿔서 사용하는 경우에 적합한 구조이다. 
+
+<br/>
+
+### 3.5.1 템플릿/콜백의 동작원리
+
+- 템플릿/콜백패턴의 콜백은 보통 단일 메소드 인터페이스를 사용한다. 
+- 하나의 템플릿에서 여러 가지 종류의 전략을 사용해야 한다면 하나 이상의 콜백 오브젝트를 사용할 수도 있다. 
+- 콜백은 일반적으로 하나의 메소드를 가진 인터페이스를 구현한 익명 내부 클래스로 만들어진다고 보면 된다. 
+- 콜백 인터페이스의 메소드에는 보통 파라미터가 있다. 이 파라미터는 템플릿의 작업 흐름 중에 마늘어지는 컨텍스트 정보를 전달받을 때 사용한다. 
+- 템플릿/콜백 방식에서는 매번 메소드 단위로 사용할 오브젝트를 새롭게 전달받는다. 
+- 콜백 오브젝트가 내부 클래스로서 자신을 생성한 클라이언트 메소드 내의 정보를 직접 참조한다. 
+- 클라이언트와 콜백이 강하게 결합된다. 
+
+</br>
+
+### 3.5.2 편리한 콜백의 재활용
+
+#### <I>Step1. 익명내부클래스에서 중복될 가능성이 있는 부분을 분리하기 </I>
+
+#### <I>Step2. 재사용 가능한 콜백을 담고 있는 메소드를 여러 DAO가 공유할 수 있는 템플릿 클래스로 옮기기</I>
+
+```
+public class JdbcContext {
+	private DataSource dataSource; 
+	
+	public void setDataSource(DataSource dataSource) {
+		this.dataSource = dateSource;
+	}
+	
+	public void workWithStatementStrategy(StatementStrategy stmt) throws SQLException {
+		Connection c = null;
+		PreparedStatement ps = null;
+		
+		try {
+			c = this.dataSource.getConnection();
+			ps = stmt.makePreparedStatement(c);
+			ps.excuteUpdate();
+		} catch (SQLException e) {
+			throw e;
+		} finally {
+			if (ps != null) { try { ps.close(); } catch (SQLException e) {}}
+			if (c != null) { try { c.close(); } catch (SQLException e) {}}
+		}
+	}
+	
+	####################################################################################
+	public void excuteSql(final String query) throws SQLException {
+		workWithStatementStrategy(
+			new StatementStrategy() {
+				pubic PreparedStatement makePreparedStatement(Connection c) throws SQLException {
+					retucn c.prepareStatement(query);
+				}});
+	}
+	####################################################################################
+	
+}
+```
+
+```
+public void deleteAll() throws SQLException {
+	this.jdbcContext.executeSql("delete from users");
+}
+```
+
+- 하나의 목적을 위해 서로 긴밀하게 연관되어 동작하는 응집력이 강한 코드들이므로, 한 군데 모여 있는 것이 유리하다. 
+
+<br/>
+
+## 3.5.3 템플릿/콜백의 응용
+
+### "고정된 작업 흐름을 갖고 있으면서 자주 반복되는 코드가 있다면, 중복되는 코드를 분리할 방법을 고민한다. "
+
+- 중복된 코드는 먼저 메소드로 분리해본다. 
+- 그 중, 일부 작업을 필요에 따라 바꿔 사용할 필요가 있다면 인터페이스를 사이에 두고 분리해서 전략패턴을 적용하고 DI로 의존관계를 관리하도록 만든다. 
+- 이 때 바뀌는 부분이 한 애플리케이션 안에서 동시에 여러 종류가 만들어질 수 있다면 템플릿/콜백 패턴을 적용하는 것을 고려해본다. 
+
+#
+
+## 3.6 스프링의 JdbcTemplate
+
+스프링은 JDBC를 이용하는 DAO에서 사용할 수 있도록 준비된 다양한 템플릿과 콜백을 제공한다. 스프링이 제공하는 JDBC 코드용 기본 템플릿은 JdbcTemplate이다. (앞의 JdbcContext와 유사)
+
+```
+public class UserDao {
+	...
+	private JdbcTemplate jdbcTemplate;
+	
+	public void setDataSource(DataSource dataSource) {
+		this.jdbcTemplate = new JdbcTemplate(dataSource);
+		this.dataSource = dataSource; 
+	}
+}
+```
