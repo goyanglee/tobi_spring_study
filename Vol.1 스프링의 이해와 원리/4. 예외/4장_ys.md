@@ -153,3 +153,112 @@ ex) 통장에 잔고가 없는데 출금을하려하는 상황같은.
 스프링 JdbcTemplate은 템플릿과 콜백안에서 발생하는 모든 sqlExeption을 DataAccessException으로 포장해서 던져준다. 
 
 # 4.2 예외전환
+
+## 4.2.1 JDBC의 한계
+
+### 비표준 SQL
+
+: jdbc 코드에서 사용하는 SQL
+
+### 호환성 없는 SQLException의 DB 에러 정보
+
+sqlException의 종류
+
+- SQL 문법 오류
+- DB 커넥션 에러
+- 테이블 필드의 존재하지 않음
+- 키가 중복
+- 제약조건 위배
+- 데드락
+- 락을 얻지못했거나
+
+등등등 수백가지
+
+근데 문제는 DB마다도 또 다다름.
+
+그런데 이 많은 에러를 하나의 Exception에 담는다.
+
+DB마다 고유 에러코드가 있으니, 에러코드로 확인하지만 DB가 바뀔때마다 바꿔주어야 한다.
+
+결국 SQLException 만으로 DB에 독립적인 유연한 코드를 작성하는 건 불가능하다. 
+
+## 4.2.2 DB 에러코드 매핑을 통한 전환
+
+각 DB별 에러 코드 매핑 파일을 이용해, 전부 알기 쉬운 에러로 던져주자
+
+![4장_ys/Untitled%201.png](4장_ys/Untitled%201.png)
+
+이런식으로 매핑 파일을 사용하고 나면
+
+```java
+catch(DuplicateKeyException e){
+   throw DuplicationUserIdException().initCause(e);
+}
+```
+
+이런식으로 에러를 잡을 수 있다.
+
+## 4.2.3 DAO 인터페이스와 DataAccessException 계층 구조
+
+JDO나 JPA는 JDBC와 마찬가지로 자바의 표준 퍼시스턴스 기술이지만 JDBC와는 성격과 사용 방법이 크게 다르다.
+
+DataAccessException은 JDBC의 SQLException을 전환하는 용도로만 만들어진 건 아니다. JDBC 외에 자바 데이터 엑세스 기술에서 발생하는 예외에도 적용된다.
+
+의미가 같은 예외라면 데이터 액세스 기술의 종류와 상관없이 일관된 예외가 발생하도록 만들어준다.
+
+데이터 액세스 기술에 독립적인 추상화된 예외를 제공하는 것이다. 
+
+스프링이 왜 이렇게 DataAccessException 계층구조를 이용해 기술에 독립적인 예외를 정의하고 사용하게 하는지 생각해보자 ← 생각해보자...!!!!!
+
+### DAO 인터페이스와 구현의 분리
+
+### 데이터 액세스 예외 추상화와 DataAccessException 계층 구조
+
+스프링은 자바의 다양한 데이터 액세스 기술을 사용할 때 발생하는 예외들을 추상화해서 DataAccessException 계층 구조 안에 정리해 놓았다. 
+
+```java
+public abstract class DataAccessException extends NestedRuntimeException {
+
+	/**
+	 * Constructor for DataAccessException.
+	 * @param msg the detail message
+	 */
+	public DataAccessException(String msg) {
+		super(msg);
+	}
+
+	/**
+	 * Constructor for DataAccessException.
+	 * @param msg the detail message
+	 * @param cause the root cause (usually from using a underlying
+	 * data access API such as JDBC)
+	 */
+	public DataAccessException(@Nullable String msg, @Nullable Throwable cause) {
+		super(msg, cause);
+	}
+
+}
+
+//코드를 보니 이걸 상속하고 상속하고 상속해서 ... exception 을 만듬
+//ex) import org.springframework.dao.EmptyResultDataAccessException;
+```
+
+p.308 그림도 참고
+
+결론 : dao를 만들면 사용 기술에 독립적인 일관성 있는 예외를 던질 수 있고, 결국 인터페이스 사용, 런타입 예외전환과 함께 DataAccessException 예외 추상화를 적용하면 데이터 액세스 기술과 구현 방법에 독립적인 이상적인 DAO를 만들 수가 있다.
+
+이래서 dao를 만드는 구나~
+
+## 4.2.4 기술에 독립적인 UserDao 만들기
+
+### 인터페이스 적용
+
+```java
+public interface UserDao
+```
+
+### 테스트 보완
+
+### DataAccessException 활용 시 주의 사항
+
+duplicateKeyException은 아직까지는 JDBC 를 이용하는 경우에만 발생한다.
