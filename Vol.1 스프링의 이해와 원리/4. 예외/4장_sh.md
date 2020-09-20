@@ -91,7 +91,7 @@
 
   1) 의미를 분명하게 해줄 수 있는 예외로 바꿔주기 위해
 
-  2) 예외를 처리하기 쉽고 단순하게 만들기 위해
+  2) 예외를 처리하기 쉽고 단순하게 만들기 위해 : 런타임 예외로 만들어서 굳이 필요하지 않은 catch/throws를 줄여준다.
 
 <br/>
 
@@ -103,3 +103,28 @@ JdbcTemplate의 update(), queryForInt(), query() 메소드는 모두 throws Data
 
 <br/>
 
+## 4.2 예외 전환
+
+### DataAccessException 계층구조
+
+스프링은 자바의 다양한 데이터 액세스 기술을 사용할 때 발생하는 예외들을 추상화해서 DataAccessExceptin 계층구조 안에 정리해뒀다. 추상화되어 있는 예외들의 타입은 다음과 같다. 
+
+- 데이터 액세스 기술에 상관없이 공통적으로 발생하는 예외
+
+  예) InvalidDataAccessResourceUsageException - 거의 대부분 프로그램을 잘못 작성해서 발생하는 오류
+
+
+
+- 일부 데이터 액세스 기술에서만 발생하는 예외
+
+  예) ObjectOptimisticLockinFailureException - JDO/JPA/Hibernate 마다 별도로 발생시키는 낙관적인 락킹예외를 이 예외로 통일시킴
+
+  > 낙관적인 락킹? 
+  >
+  > 같은 정보를 두 명 이상의 사용자가 동시에 조회하고 순차적으로 업데이트할 때 뒤늦게 업데이트한 것이 먼저 업데이트한 것을 덮어쓰지 않도록 막아주는 데 쓸 수 있는 편리한 기능
+
+
+
+- 템플릿 메소드나 DAO 메소드에서 직접 활용할 수 있는 예외
+
+  예) IncorrectResultSizeDataAccessException - 한 개 로우만 돌려주는 쿼리에 사용하는 queryForObject()를 작성했을 때 여러 개의 로우를 가져온 경우 발생하는 예외
