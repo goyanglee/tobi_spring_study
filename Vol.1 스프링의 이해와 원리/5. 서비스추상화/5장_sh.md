@@ -180,10 +180,10 @@ public class UserService {
 	}
 
 	public void upgradeLevels() {
-    -- 코딩생략 -- 
-    //전체 유저목록을 가져와서
-    //조건에 부합하는 유저를 찾아 레벨up해주는 로직
-  }
+	    -- 코딩생략 -- 
+	    //전체 유저목록을 가져와서
+	    //조건에 부합하는 유저를 찾아 레벨up해주는 로직
+	  }
 }
 ```
 
@@ -218,5 +218,191 @@ public class UserService {
    	}
    }
    ```
+
+<br/>
+<br/>
+
+
+
+
+### 코드개선
+
+#### 체크 포인트
+
+- 코드에 중복된 부분은 없는가? 
+- 코드가 무엇을 하는 지 이해하기 불편하지 않은가?
+- 코드가 자신이 있어야 할 자리에 있는가?
+- 앞으로 변경이 일어난다면 어떤 것이 있을 수 있고, 그 변화에 쉽게 대응할 수 있게 작성되어 있는가?
+
+<br/>
+
+
+
+#### 예제 : UserService의 upgradeLevels 메소드 로직 리펙토링
+
+```
+public void upgradeLevels() {
+	List<User> users = userDao.getAll(); 
+	
+	for(User user : users) {
+		Boolean changed = null; 
+		
+		if (user.getLevel() == Level.BASIC && user.getLogin() >= 50) { //BASIC 레벨 업
+			user.setLevel(Level.SILVER);
+			changed = true; 
+		}
+		else if (user.getLevel() == Level.SILVER && user.getRecommend() >= 30) { //SILVER 레벨 업
+			user.setLevel(Level.GOLD);
+			changed = true; 
+		}
+		else if (user.getLevel() == Level.GOLD) { //GOLD 레벨 업
+			changed = false; 
+		}
+		else {
+			changed = false; 
+		}
+		
+		if (changed) { //레벨변경 true이면 DB update
+			userDao.update(user);
+		}
+	}
+}
+```
+
+
+
+**개선해야 할 점**
+
+- 성격이 다른 로직들이 한 데 함께 존재한다. (레벨의 변화 단계와 업그레이드 조건, 조건이 충족됐을 때 해야 할 작업, 조건 충족 여부를 확인하는 플래그 처리) 
+- if 조건 블록이 레벨 개수만큼 반복된다. 새로운 레벨이 추가되면 Level 이늄도 수정해야 하고 upgradeLevels()에 레벨 업그레이드 로직을 담은 코드에 if 조건식과 블록이 추가되어야 한다.
+- 현제 레벨과 업그레이드 조건을 동시에 비교하는 부분 즉 성격이 다른 부분이 한 곳에서 처리된다. 
+
+<br/>
+
+
+
+**Step1. 기본 로직 흐름을 만들고 구체적인 기능은 메소드화 한다. **
+
+```
+public void upgradeLevels() {
+	List<User> users = userDao.getAll();
+	
+	for(User user : users) {
+		if (canUpgradeLevel(user)) {
+			upgradeLevel(user);
+		}
+	}
+}
+```
+
+```
+private boolean canUpgradeLevel(User user) {
+	Level currentLevel = user.getLevel();
+	
+	swtich(currentLevel) {
+		case BASIC: return (user.getLogin() >= 50);
+		case SILVER: return (user.getRecommend() >= 30);
+		case GOLD: return false; 
+		default: throw new IllegalArgumentException("Unknown Level: " + currentLevel);
+	}
+}
+```
+
+```
+private void upgradeLevel(User user) {
+	if (user.getLevel() == Level.BASIC) user.setLevel(Level.SILVER);
+	else if (user.getLevel() == Level.SILVER) user.setLevel(Level.GOLD);
+	userDao.update(user);
+}
+```
+
+- 새로운 레벨과 그에 대한 로직이 추가될 수 있도록 현재 로직에서 다룰 수 없는 레벨이 주어지면 예외를 발생시킨다. 
+- **upgradeLevel() 코드에서 개선 할 점**
+  - 다음단계가 무엇인 지 체크하는 부분과 사용자 오브젝트의 레벨 필드를 변경해주는 로직이 함께 존재한다. 
+  - 예외 상황에 대한 처리가 없다. (다음 단계가 없는 GOLD 레벨 사용자를 업그레이드하려고 이 로직을 호출하게 되면 아무 처리도 안하고 dao의 업데이트 메소드만 실행됨)
+  - 새로운 레벨이 추가되면 조건문이 계속 추가된다. 
+
+<br/>
+
+
+
+**Step2. 레벨에 대한 작업은 Level 클래스에서 하도록 만든다. **
+
+```
+public enum Level {
+	GOLD(3, null), SILVER(2, GOLD), BASIC(1, SILVER); //
+	
+	private final int value; 
+	private final Level next; //
+	
+	Level(int value, Level next) {
+		this.value = value; 
+		this.next = next; //
+	}
+	
+	public int intValue() {
+		return value; 
+	}
+	
+	public Lvel nextLevel() { //
+		return this.next; 
+	}
+	
+	public static Level valueOf(int value) {
+		switch(value) {
+			case 1: return BASIC; 
+			case 2: return SILVER; 
+			case 3: return GOLD; 
+			default: throw new AssertionError("Unknown value: " + value);
+		}
+	}
+}
+```
+
+
+
+**Step3. 유저의 레벨이 변경되는 부분을 User에서 하도록 만든다. User의 내부 정보가 바뀌는 것은 UserService 보다는 User가 스스로 다루는 게 적절하다.  **
+
+> User는 사용자 정보를 담고 있는 단순 자바빈이지만 엄연히 자바 오브젝트이고 내부 정보를 다루는 기능이 있을 수 있다. UserService가 일일이 레벨 업그레이드 시에 User의 어떤 필드를 수정한다는 로직을 갖고 있는 것보다는, User에게 레벨 업그레이드를 해야하니 정보를 변경하라고 요청하는 편이 낫다. 
+
+<br/>
+
+```
+public void upgradeLevel() {
+	Level nextLevel = this.level.nextLevel();
+	if (nextLevel == null) {
+		throw new IllegalStateException(this.level + "은 업그레이드가 불가능합니다");
+	}
+	else {
+		this.level = nextLevel; 
+	}
+}
+```
+
+- 더이상 업그레이드가 불가능한 경우에 대한 에러 처리를 해준다. 
+  - canUpgradeLevel() 메소드에서 업그레이드 가능 여부를 미리 판단해주기는 하지만
+  - User 오브젝트를 UserService에서만 사용하는 것이 아니기 때문에 스스로 예외 상황에 대한 검증 기능을 갖고 있는 편이 안전하다. 
+
+<br/>
+
+```
+private void upgradeLevel(User user) {
+	user.upgradeLevel(); //
+	userDao.update(user);
+}
+```
+
+<br/>
+
+
+
+#### 정리
+
+각 오브젝트와 메소드가 각각 자기 몫의 책임을 맡아 일을 하는 구조로 변경 - UserService/User/Level이 내부 정보를 다루는 자신의 책임에 충실한 기능을 갖고 있으면서 필요가 생기면 이런 작업을 수행해달라고 서로 요청하는 구조로 변경
+
+- [x] 성격이 다른 로직들이 한 데 함께 존재한다.
+- [x] if 조건 블록이 레벨 개수만큼 반복된다. 
+- [x] 현제 레벨과 업그레이드 조건을 동시에 비교하는 부분 즉 성격이 다른 부분이 한 곳에서 처리된다. 
+
 
    
