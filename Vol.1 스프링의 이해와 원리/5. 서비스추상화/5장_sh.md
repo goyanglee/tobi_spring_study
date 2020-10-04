@@ -406,4 +406,263 @@ private void upgradeLevel(User user) {
 - [x] 현제 레벨과 업그레이드 조건을 동시에 비교하는 부분 즉 성격이 다른 부분이 한 곳에서 처리된다. 
 
 
+<br/>
+
+## 5.2 트랜잭션 서비스 추상화
+
+지금까지 작성한 코드는 트랜잭션 처리가 안되어 있다. 
+
+<br/>
+
+모든 사용자에 대해 레벨 업그레이드 작업을 진행하다가 중간에 예외가 발생해서 작업이 중단되어도, 그 전까지 변경된 사용자 정보는 그대로 유지된다. 트랜잭션 문제이다. 모든 사용자의 레벨을 업그레이드하는 작업인 ``` upgradeLevels()``` 메소드가 하나의 트랜잭션 안에서 동작하지 않았기 때문이다. 
+
+<br/>
+
+> ### 트랜잭션이란
+>
+> 더 이상 나눌 수 없는 단위 작업을 의미한다. 작업을 쪼개서 작은 단위로 만들 수 없다는 것은 트랜잭션의 핵심 속성인 원자성을 의미한다. 
+
+<br/>
+
+## 트랜잭션 경계설정
+
+하나의 SQL 명령을 처리하는 경우는 DB에서 트랜잭션을 보장해주지만, 여러 개의 SQL이 사용되는 작업을 하나의 트랜잭션으로 처리해야만 하는 경우가 있다. 여러 개의 작업이 하나의 트랜잭션이 되려면 커밋과 롤백 개념이 필요하다. 
+
+- 트랜잭션 롤백 : 모든 작업을 무효화한다. (N번 째 SQL이 성공적으로 DB에서 수행되기 전에 문제가 발생한 경우에는, 이전에 처리했던 SQL 작업도 전부 취소시켜야 한다)
+- 트랜잭션 커밋 : 모든 작업을 확정한다. (모든 SQL 작업이 성공적으로 마무리됐다고 DB에 알려서 작업을 확정시켜야 한다)
+
+<br/>
+
+> ### 트랜잭션의 경계란
+>
+> 애플리케이션 내에서 트랜잭션이 시작되고 끝나는 위치이다. 복잡한 로직흐름에서 정확하게 트랜잭션 경계를 설정하는 일은 매우 중요한 작업이다. 
+
+<br/>
+
+
+
+### JDBC 트랜잭션의 트랜잭션 경계설정
+
+- JDBC 트랜잭션은 하나의 Connection을 가져와 사용하다가 닫는 사이에서 일어난다. 
+- 트랜잭션의 시작과 종료는 Connection 오브젝트를 통해 발생한다.
+  - 트랜잭션의 시작: 자동커밋 옵션을 false로 설정해주는 시점.  ```setAutoCommit(false)``` 
+  - 트랜잭션의 종료: 커밋 또는 롤백이 호출되는 시점. ```commit()``` ```rollback()``` 
+- 위처럼 트랜잭션의 시작을 선언하고 종료하는 작업을 **트랜잭션의 경계설정**이라고 한다. 
+- 하나의 DB 커넥션 안에서 만들어지는 트랜잭션을 **로컬 트랜잭션**이라고 한다. 
+
+<br/>
+
+#### 문제점
+
+JdbcTemplate의 메소드를 사용하는 UserDao는 각 메소드마다 하나의 독립적인 트랜잭션으로 실행된다. 즉, UserDao는 JdbcTemplate를 통해 매번 새로운 DB 커넥션과 트랜잭션을 만들어서 사용한다. UserService의 전체적인 비즈니스 로직 상의 트랜잭션 처리는 불가능한 상태
+
+<br/>
+
+### 비즈니스 로직 내의 트랜잭션 경계설정
+
+위 문제점을 해결하려면 즉 어떤 일련의 작업이 하나의 트랜잭션으로 묶이려면 그 작업이 진행되는 동안 DB 커넥션도 하나만 사용되어야 한다. 결국 트랜잭션의 경계설정 작업을 UserService 쪽으로 가져와야 한다. 
+
+트랜잭션 경계를 ```upgradeLeveles()``` 메소드 안에 두려면 DB 커넥션도 이 메소드에서 만들고 종료시켜야 한다. UserDao의 ```update()``` 메소드가 반드시 ```upgradeLevels()``` 메소드에서 만든 커넥션을 사용해야만 같은 트랜잭션 안에서 동작할 수 있다. 
+
+(그림 5-40)
+
+<br/>
+
+#### 문제점
+
+- DB 커넥션을 비롯한 리소스의 깔끔한 처리를 가능하게 했던 JdbcTemplate을 활용할 수 없다.
+- DAO의 메소드와 비즈니스 로직을 담고 있는 UserService의 메소드에 Connection 파라미터가 추가되어야 한다. 
+- Connection 파라미터가 UserDao 인터페이스 메소드에 추가되면 UserDao는 더 이상 데이터 액세스 기술에 독립적일 수 없다. 
+- DAO 메소드에 Connection 파라미터를 받게 하면 테스트 코드에도 영향을 미친다. 테스트 코드에서 직접 Connection 오브젝트를 일일이 만들어서 DAO 메소드를 호출하도록 변경해야 한다. 
+
+<br/>
+
+
+
+### 트랜잭션 동기화
+
+> ### 트랜잭션 동기화란
+>
+> UserService에서 트랜잭션을 시작하기 위해 만든 Connection 오브젝트를 특별한 저장소에 보관해두고, 이후에 호출되는 DAO의 메소드에서는 저장된 Connection을 가져다가 사용하게 하는 것이다. 트랜잭션 동기화 저장소는 작업 스레드마다 독립적으로 Connection 오브젝트를 저장하고 관리하므로 멀티스레드 환경에서도 안전하다. 
+
+<br/>
+
+#### 스프링에서는 TransactionSynchronizationManager라는 트랜잭션 동기화 관리 클래스를 제공한다. 
+
+- ```initSynchronization()``` : 트랜잭션 동기화 작업 초기화
+- ```unbindResource()``` ```clearSynchronization()``` : 트랜잭션 동기화 작업 종료 및 정리
+
+
+
+```
+private DataSource dataSource; 
+public void setDataSource(DataSource dataSource) {
+	this.dataSource = dataSource;
+}
+
+public void upgradeLevels() throws Exception {
+	TransactionSynhronizationManager.initSynchronization(); 
+	
+	Connection c = DataSourceUtils.getConnection(dataSource);
+	c.setAutoCommit(false); 
+	
+	try {
+		//유저목록 전체 불러와서 레벨 업그레이드 수행하는 로직(코드 생략)
+		c.commit(); 
+	} catch (Exception e) {
+		c.rollback();
+		throw e; 
+	} finally {
+		DataSourceUtils.releaseConnection(c, dataSource);
+		TransactionSynchronizationManager.unbindResource(this.dataSource);
+		TransactionSynchronizationManager.clearSynchronization();
+	}
+}
+```
+
+```
+<bean id="userService" class="com.sh.service.UserService">
+	<property name="userDao" ref="userDao" />
+	<proeprty name="dataSource" ref="dataSource" />
+</bean>
+```
+
+**[참고]** 
+
+```DataSourceUtils.getConnection(dataSource)``` : 스프링 유틸리티 메소드를 사용해서 Connection 오브젝트를 생성해주고 트랜잭션 동기화에 사용하도록 저장소에 바인딩해준다. 
+
+```DataSourceUtils.releaseConnection(c, dataSource)``` : 스프링 유틸리티 메소드를 사용해서 DB 커넥션을 안전하게 닫는다. 
+
+<br/>
+
+> ### (!) JdbcTemplate
+>
+> JdbcTemplate은 ```update()``` ```query()``` 같은 JDBC 작업의 템플릿 메소드를 호출하면 직접 Connection을 생성하고 종료하는 일을 모두 담당한다. 
+>
+> #### 기능 정리
+>
+> - JDBC 코드의 try/catch/finally 작업 흐름 지원
+> - SQLException의 예외 변환
+> - **트랜잭션 처리** 
+>   - 트랜잭션 동기화 저장소에 미리 생성되어 등록된 커넥션이 없으면 직접 커넥션을 만들고 트랜잭션을 시작해준다. 
+>   - 이미 트랜잭션이 시작되어 있다면 동기화 저장소에 있는 커넥션을 가져와서 사용한다.
+
+<br/>
+
+
+
+### 트랜잭션 서비스 추상화
+
+비즈니스 요구사항에 따라 각각 별도의 트랜잭션 관리 코드를 사용하는 경우가 존재한다. 예를 들어 로컬 트랜잭션으로 커버가 가능한 요구사항도 있지만, 만약 디비를 여러 개 사용해야하는 상황이라면 글로벌 트랜잭션을 고려해야 한다. 이 글로벌 트랜잭션을 필요로 하는 곳을 위해서는 JTA를 사용한 트랜잭션 관리 코드를 적용해야만 한다. 즉 서비스 로직이 바뀌지 않더라도 기술 환경에 따라 코드가 변경되어야 하는 문제가 생긴다. 
+
+> #### 글로벌 트랜잭션이란
+>
+> 별도의 트랜잭션 관리자를 통해 트랜잭션을 관리하는 방식이다. 글로벌 트랜잭션을 적용하면 트랜잭션 매니저를 통해 여러 개의 DB가 참여하는 작업을 하나의 트랜잭션으로 만들 수 있다. 또 JMS와 같은 트랜잭션 기능을 지원하는 서비스도 트랜잭션에 참여시킬 수 있다. 
+>
+> - 자바에서는 글로벌 트랜잭션을 지원하는 트랜잭션 매니저를 지원하기 위한 API로 **JTA (Java Transaction API)** 를 제공한다. 
+
+<br/>
+
+
+
+#### UserService 코드가 특정 트랜잭션 방식에 의존하지 않으려면 "추상화"를 고려해야 한다. 스프링은 트랜잭션 기술의 공통점을 담은 트랜잭션 추상화 기술을 제공한다. (일관된 방식으로 트랜잭션을 제어하는 트랜잭션 경계설정 작업 가능)
+
+<br/>
+
+(그림 5-6)
+
+<br/>
+
+> #### PlatformTransactionManager
+>
+> 스프링이 제공하는 트랜잭션 경계설정을 위한 추상 인터페이스
+
+<br/>
+
+```
+public void upgradeLevels() {
+	PlatformTransactionManager transactionManager = 
+										new DataSourceTransactionManager(dataSource); 
+	
+	TransactionStatus status = 
+										transactionManager.getTransaction(new DefaultTransactionDefinition());
+										
+	try {
+		//트랜잭션 안에서 진행되는 작업(코드 생략) 
+		transactionManager.commit(status);
+	} catch (RuntimException e) {
+		transactionManager.rollback(status);
+		throw e; 
+	}
+											
+}
+```
+
+- JDBC 로컬 트랜잭션이 필요하면 PlatformTransactionManager를 구현한 DataSourceTransactionManager를 사용한다. 글로벌 트랜잭션으로 변경하려면 JTATransactionManager를 사용하면 된다. 
+- ```getTransaction()``` : 트랜잭션을 가져오는 요청. 필요에 따라 트랜잭션 매니저가 디비 커넥션을 가져오는 작업도 같이 수행해준다. 
+- PlatformTransactionManager로 시작한 트랜잭션은 동기화 저장소에 저장된다. 
+- PlatformTransactionManager를 구현한 DataSourceTransactionManager 오브젝트는 JdbcTemplate에서 사용될 수 있는 방식으로 트랜잭션을 관리해준다. 따라서 PlatformTransactionManager를 통해 시작한 트랜잭션은 UserDao의 JdbcTemplate 안에서 사용된다. 
+- 트랜잭션 작업을 모두 수행한 후에는 트랜잭션을 만들 때 돌려받은 TransactionStatus 오브젝트를 파라미터로 해서 ```commit()``` ```rollback()``` 메소드를 수행한다. 
+
+<br/>
+
+
+
+#### 트랜잭션 기술 설정의 분리가 필요하다. 사용할 트랜잭션 매니저 구현 클래스는 컨테이너를 통해 외부에서 제공받게 하는 스프링 DI 방식으로 선언해야 한다. 
+
+> **[참고]** 스프링이 제공하는 모든 PlatformTransactionManager 구현 클래스는 싱글톤으로 사용이 가능하므로 스프링의 싱글톤 빈으로 등록해도 괜찮다. 
+
+<br/>
+
+```
+public class UserService {
+	...
+	private PlatoformTransactionManager transactionManager; 
+	public void setTransactionManager(PlatformTransactionManager transactionManager) {
+		this.transactionManager = transactionManager; 
+	}
+	
+	public void upgradeLevels() {
+		...
+	}
+	...
+}
+```
+
+```
+<bean id="userService" class="com.sh.service.UserService">
+	<property name="userDao" ref="userDao" />
+	<property name="transactionManager" ref="transactionManager" />
+</bean>
+
+<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+	<property name="dataSource" ref="dataSource" />
+</bean>
+```
+
+<br/>
+
+> #### 단일 책임 원칙 (Single Responseibility Principle)
+>
+> 하나의 모듈은 한 가지 책임을 가져야 한다. 어떤 변경이 필요할 때 수정 대상이 명확해지는 장점이 있다. 
+
+<br/>
+
+### 메일 서비스 추상화
+
+메일 전송 로직 구현 시에도 추상화가 필요하다. 
+
+단지 테스트일 뿐인데 실제 메일 서버로 메일을 전송하는 것은 서버에 부담이 갈 수 있다. 테스트 중에는 JavaMail 대신 테스트에서 사용할, JavaMail과 같은 인터페이스를 갖는 오브젝트를 만들어서 사용하는 것이 좋다. 
+
+스프링에서는 JavaMail에 대한 추상화 기능을 제공한다. 
+
+```
+package org.springframework.mail;
+...
+public interface MailSender {
+	void send(SimpleMailMessage simpleMessage) throws MailException;
+	void send(SimpleMailMessage[] simpleMessages) throws MailException;
+}
+```
+
    
