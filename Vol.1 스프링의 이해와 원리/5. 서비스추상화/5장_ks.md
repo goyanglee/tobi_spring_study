@@ -89,3 +89,69 @@ public Level nextLevel() {return this.next;}
 }
 ```
 next라는 다음 단계 레벨 정보를 담도록 필드를 추가하면 다음 단계의 레벨이 무엇인지 if 조건식을 쭈욱 만들어줄 필요가 없다.
+**오브젝트에게 데이터를 요구하지 말고 작업을 요청하라는 것이 객체지향 프로그래밍의 가장 기본이 되는 원리이다.** 유저에서 데이터를 가져와서 작업하는 것이 아니라 유저에게 “레벨 업그레이드 작업을 해달라”고 요청하고, 유저는 레벨에게 “다음 레벨이 뭔지 알려달라”고 요청하는 것이다. 
+
+```java
+//sudo 코드 
+@Test
+public void upgradeLevels() {
+public static final int SILVER=50;
+private boolean canUpgradeLevel(User user) {
+	switch(levle){
+		case BASIC:return (user.getLogin() >= SILVER);
+	}
+}
+}
+```
+
+### 트랜잭션 서비스
+여러 오브젝트를 처리할 때 그 중 하나가 실패하면 다른 오브젝트들도 영향을 받을까? 하나의 트랜잭션 안에서 동작하지 않았다면 영향을 받지 않을 것이다. 하지만 영향을 받아야 하는 시나리오가 있을 수 있다. 모든 유저의 레벨을 업그레이드 시킨다고 한다면 누구는 되고, 누구는 안되는 시나리오는 발생하면 안된다. 여러 작업 중 하나라도 실패하면 취소(트랜잭션 롤백)해야 한다.
+
+#### JDBC 트랜잭션의 경계 설정
+트랜잭션이 한번 시작되면 commit() 또는 rollback() 메소드가 호출될 때까지의 작업이 하나의 트랜잭션으로 묶인다. 이 작업을 **트랜잭션 경계 설정**이라고 한다. 트랜잭션의 경계는 하나의 커넥션이 만들어지고 닫히는 범위 안에 존재한다. 하나의 DB 커넥션 안에서 만들어지는 트랜잭션을 **로컬 트랜잭션**이라고 한다.
+
+![그림5-2](url)
+
+#### 로직 내의 트랜잭션 경계 설정 
+커넥션을 공유하도록 한다. 
+##### 한계점 
+1. JDBC API 를 사용하는 방식을 사용해야 한다.
+2. 비즈니스 로직을 담고있는 메소드에 공유할 커넥션 파라미터가 추가되어야 한다.
+3. 그렇게 되면 데이터 엑세스 기술에 독립적일 수가 없다. dao의 구현방식을 변경하려고 하면 커넥션 대신에 세션을 받아야하기 때문에 결국 전부 수정이 일어나야 한다.
+4. 테스트코드에도 영향을 준다.
+
+#### 트랜잭션 동기화 사용
+트랜잭션 동기화란, 트랜잭션을 시작하기 위해 만든 커넥션 오브젝트를 특별한 저장소에 보관하고 호출되는 dao 의 메소드에서는 이를 가져다 사용하게 한다. 트랜잭션이 종료되면 동기화를 마친다.
+**TransactionSynchronizationManager**
+
+![그림5-3](url)
+
+1. 커넥션을 생성하고
+2. 동기화 저장소에 보관한 후
+```java
+TransactionSynchronizationManager.initSynchronization();
+Connection c=DataSourceUtils.getConnection(dataSource);
+c.setAutoCommit(false);
+```
+3. 트랜잭션을 시작한다. 
+4. 저장소에 트랜잭션이 있는지 확인한 후 
+5. 가져와서 sql 을 실행한다.
+6. 커넥션을 가져왔을 경우 커넥션을 닫지 않는다. 
+7. 트랜잭션 내의 모든 작업들이 정상적으로 완료됐으면 트랜잭션을 완료시킨다. 
+```java
+DataSourceUtils.releaseConnection(c,dataSource);
+TransactionSynchronizationManager.unbindResource(this.dataSource);
+```
+8. 완료시키고 나면 커넥션을 제거한다.
+```java
+TransactionSynchronizationManager.clearSynchronization();
+```
+
+> 트랜잭션 저장소는 작업 스레드마다 독립적으로 커넥션을 관리하기 때문에 멀티쓰레드 환경에서도 충돌나지 않는다.
+
+#### JdbcTemplate 과 트랜잭션 동기화 
+JdbcTemplate은 트랜잭션 동기화 저장소에 등록된 커넥션을 확인한 후 작업을 진행한다.
+
+### 트랜잭션 서비스 추상화 
+하나의 트랜잭션 안에 여러 DB 로 작업을 해야하는 경우에는?
+**글로벌 트랜잭션** 방식을 사용해야한다. 트랜잭션 매니저를 통해 수행할 수 있다. 자바는 JTA(Java Transaction API)도 제공하고 있다.
