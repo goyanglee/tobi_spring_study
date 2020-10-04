@@ -464,7 +464,8 @@ JdbcTemplate의 메소드를 사용하는 UserDao는 각 메소드마다 하나�
 
 트랜잭션 경계를 ```upgradeLeveles()``` 메소드 안에 두려면 DB 커넥션도 이 메소드에서 만들고 종료시켜야 한다. UserDao의 ```update()``` 메소드가 반드시 ```upgradeLevels()``` 메소드에서 만든 커넥션을 사용해야만 같은 트랜잭션 안에서 동작할 수 있다. 
 
-(그림 5-40)
+![그림5-40](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20%EC%8A%A4%ED%94%84%EB%A7%81%EC%9D%98%20%EC%9D%B4%ED%95%B4%EC%99%80%20%EC%9B%90%EB%A6%AC/5.%20%EC%84%9C%EB%B9%84%EC%8A%A4%EC%B6%94%EC%83%81%ED%99%94/5%EC%9E%A5_sh/%E1%84%80%E1%85%B3%E1%84%85%E1%85%B5%E1%86%B75-40.jpeg)
+
 
 <br/>
 
@@ -569,7 +570,7 @@ public void upgradeLevels() throws Exception {
 
 <br/>
 
-(그림 5-6)
+![그림5-6](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20%EC%8A%A4%ED%94%84%EB%A7%81%EC%9D%98%20%EC%9D%B4%ED%95%B4%EC%99%80%20%EC%9B%90%EB%A6%AC/5.%20%EC%84%9C%EB%B9%84%EC%8A%A4%EC%B6%94%EC%83%81%ED%99%94/5%EC%9E%A5_sh/%E1%84%80%E1%85%B3%E1%84%85%E1%85%B5%E1%86%B75-6.jpeg)
 
 <br/>
 
@@ -581,11 +582,8 @@ public void upgradeLevels() throws Exception {
 
 ```
 public void upgradeLevels() {
-	PlatformTransactionManager transactionManager = 
-										new DataSourceTransactionManager(dataSource); 
-	
-	TransactionStatus status = 
-										transactionManager.getTransaction(new DefaultTransactionDefinition());
+	PlatformTransactionManager transactionManager = new DataSourceTransactionManager(dataSource); 
+	TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
 										
 	try {
 		//트랜잭션 안에서 진행되는 작업(코드 생략) 
