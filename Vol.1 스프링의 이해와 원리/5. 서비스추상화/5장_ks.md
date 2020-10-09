@@ -110,7 +110,7 @@ private boolean canUpgradeLevel(User user) {
 #### JDBC 트랜잭션의 경계 설정
 트랜잭션이 한번 시작되면 commit() 또는 rollback() 메소드가 호출될 때까지의 작업이 하나의 트랜잭션으로 묶인다. 이 작업을 **트랜잭션 경계 설정**이라고 한다. 트랜잭션의 경계는 하나의 커넥션이 만들어지고 닫히는 범위 안에 존재한다. 하나의 DB 커넥션 안에서 만들어지는 트랜잭션을 **로컬 트랜잭션**이라고 한다.
 
-![그림5-2](url)
+![그림5-2](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20스프링의%20이해와%20원리/5.%20서비스추상화/5장_ks/AF2D9C27-7302-460B-9BA3-42BAFFEC2F90.jpeg)
 
 #### 로직 내의 트랜잭션 경계 설정 
 커넥션을 공유하도록 한다. 
@@ -124,7 +124,7 @@ private boolean canUpgradeLevel(User user) {
 트랜잭션 동기화란, 트랜잭션을 시작하기 위해 만든 커넥션 오브젝트를 특별한 저장소에 보관하고 호출되는 dao 의 메소드에서는 이를 가져다 사용하게 한다. 트랜잭션이 종료되면 동기화를 마친다.
 **TransactionSynchronizationManager**
 
-![그림5-3](url)
+![그림5-3](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20스프링의%20이해와%20원리/5.%20서비스추상화/5장_ks/EC79D7CE-5BCC-4054-9291-0019326AF768.jpeg)
 
 1. 커넥션을 생성하고
 2. 동기화 저장소에 보관한 후
