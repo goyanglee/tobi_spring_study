@@ -154,4 +154,60 @@ JdbcTemplate은 트랜잭션 동기화 저장소에 등록된 커넥션을 확�
 
 ### 트랜잭션 서비스 추상화 
 하나의 트랜잭션 안에 여러 DB 로 작업을 해야하는 경우에는?
-**글로벌 트랜잭션** 방식을 사용해야한다. 트랜잭션 매니저를 통해 수행할 수 있다. 자바는 JTA(Java Transaction API)도 제공하고 있다.
+**글로벌 트랜잭션** 방식을 사용해야한다. 트랜잭션 매니저를 통해 여러 DB가 참여하는 작업을 하나의 트랜잭션으로 만들 수 있다. 또, JMS와 같은 트랜잭션 기능을 지원하는 서비스도 트랜잭션에 참여시킬 수 있다. 자바에서는 이를 지원하는 API 인, JTA(Java Transaction API)도 제공하고 있다.
+애플리케이션은 트랜잭션 매니저를 통해 DB를 관리한다. 리소스 매니저와 트랜잭션 사이는 XA 프로토콜을 통해 연결된다.
+> XA 프토토콜 : 분산 트랜잭션에서 데이터베이스와 연결하는 프로토콜
+
+```java
+InitialContext ctx.= new InitialContext();
+UserTransaction tx = (UserTransaction) ctx.lookup(tx name);
+tx.begin();
+tx.commin();
+tx.rollback();
+```
+
+> 하이버네이트는 connection 이 아니라 session을 사용한다.
+
+#### 스프링 트랜잭션 서비스 추상화 
+```java
+PlatformTransactionManager transacitonManager = new DataSourceTransactionManager(dataSource);
+TrnasactionStatus status=transactionManager.getTransaction(new DefaultTransactionDefinition());
+try{
+	userDato.getAll();
+	transactionManager.commit(status);
+}catch~
+```
+스프링이 제공하는 트랜잭션 경계 설정을 위한 추상 인터페이스는 platformTransationManager다. 
+1. JDBC를 이용하는 경우 : DataSourceTransactionManager
+
+#### 트랜잭션 기술 설정 분리 
+PlatformTransactionManager -> JTATransactionManager
+
+```java
+PlatformTransactionManager txManager = new JTATransactionManager();
+```
+
+### 서비스 추상화와 단일 책임 원칙
+지금까지 구현한 것은,
+1. 애플리케이션 계층
+2. 서비스 추상화 계층
+3. 기술 서비스 계층
+이다. 
+
+#### 단일 책임 원칙 
+객체지향의 설계의 원칙 중 하나. Single Responsibility Principle. 하나의 모듈은 하나의 책임을 가져야 한다. 하나의 모듈이 바뀌는 이유는 한 가지여야 한다.
+##### 장점 
+변경이 필요할 때 수정 대상이 명확해진다. 적절하게 책임과 관심이 다른 코드를 분리해서 서로 영향을 주지 않도록 다양한 추상화 기법을 도입하고 로직과 환경을 분리해서 복잡해지는 애플리케이션을 구성하면 수정이 용이해진다.
+
+### 예제. 메일 서비스 추상화 
+테스트 코드를 작성할 떄 메일이 보내져버리면 안된다.  그럴 땐 실제 메일이 전송되지 않는 테스트 메일 서버를 연결해서 테스트를 한다. 
+그런데, JavaMail의 핵심 api는 인터페이스로 만들어져서 구현을 바꿀 수 없다. 애초에 확장이나 지원이 불가능하도록 만들어져서 그렇다. 단, 스프링은 이를 해결하기 위해 추상화 기능을 제공한다.
+```java
+javax.activation.jar
+javax.mail.jar
+context.supplort.jar
+interface MailSender
+```
+* 테스트 대역(test double) : 테스트 대상이 되는 오브젝트의 기능에만 충실하게 수행하면서 사용하는 오브젝트
+* 테스트 스텁(test stub) : 대표적인 테스트 대역. 
+테스트 <-> 테스트 대상 오브젝트 <-> 목 오브젝트 로 동작하며 테스트 대상 오브젝트로 입출력 하는 것이 직접 테스트 구간, 테스트 대상 오브젝트에서 목 오브젝트로 입출력하는 것이 간접 테스트 구간이다.
