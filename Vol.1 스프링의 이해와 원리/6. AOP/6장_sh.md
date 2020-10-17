@@ -224,3 +224,244 @@ private void checkUserAndLevel(User updated, String expectedId, Level expectedLe
 단위 테스트는 스텁이나 목 오브젝트 사용이 필수적이지만 목 오브젝트를 만드는 일은 번거롭다. 이렇 번거로운 목 오브젝트를 편하게 작성할 수 있도록 도와주는 다양한 목 오브젝트 지원 프레임워크가 있다. 그 중 하나가 **Mockito 프레임워크**이다. 
 
 <br/>
+
+## 6.3 다이내믹 프록시와 팩토리 빈
+
+<br/>
+
+> #### 프록시
+>
+> 자신이 클라이언트가 사용하려고하는 실제 대상인 것처럼 위장해서 클라이언트의 요청을 받아주는 것. 대리인 역할
+>
+> #### 타깃
+>
+> 프록시를 통해 최종적으로 요청을 위임받아 처리하는 실제 오브젝트
+
+<br/>
+
+### - 사용목적에 따른 프록시 종류
+
+#### 1) 데코레이터 패턴
+
+타깃에 부가적인 기능을 런타임 시 다이내믹하게 부여해주기 위해 프록시를 사용하는 패턴
+
+-프록시가 여러 개일 수 있다.
+
+-프록시가 직접 타깃을 사용하도록 고정시킬 필요 없다. 
+
+<br/>
+
+#### 2) 프록시 패턴
+
+타깃의 기능 자체에는 관여하지 않으면서 타깃에 접근하는 방법을 제어해주는 프록시를 사용하는 패턴
+
+-코드에서 자신이 만들거나 접근할 타깃 클래스 정보를 알고있는 경우가 많다. 
+
+<br/>
+
+#### * 두 패턴 모두 프록시의 기본 원리를 따른다. 타깃과 같은 인터페이스를 구현해두고 위임하는 방식으로 만들어져 있다.
+
+<br/>
+
+### - 프록시 기능
+
+#### 1) 타깃과 같은 메소드를 구현하고 있다가 메소드가 호출되면 타깃 오브젝트로 위임하는 역할
+
+#### 2) 지정된 요청에 대한 부가기능 수행
+
+<br/>
+
+### - 프록시 작성의 문제점
+
+```
+public class UserServiceTx implements UserService {
+	UserService userService; //타깃 오브젝트
+	...
+	public void add(User user) {
+		this.userService.add(user); //메소드 구현, 위임
+	}
+	
+	public void upgradeLevels() { //메소드 구현
+		TransactionStatus status = this.transactionManager.getTransaction(new DefaultTransactionDefinition()); //부가기능 수행
+		
+		try {
+			userService.upgradeLevels(); //위임
+		} catch (RuntimeException e) {
+			this.transactionManager.rollback(status);
+			throw e; 
+		}
+	}
+}
+```
+
+#### 1) 타깃의 인터페이스를 구현하고 위임하는 코드를 작성하는 것이 번거롭다. 
+
+ - ```add()``` 처럼, 부가기능이 필요없는 메소드도 구현해줘야 하고
+ - 타깃 인터페이스에 메소드가 추가되면 그것도 추가로 구현해줘야 함
+
+#### 2) 부가기능 코드가 중복될 가능성이 많다. 
+
+- ```add()``` 메소드에도 트랜잭션 부가기능이 추가되어야 할 가능성이 큰데, 
+- 그렇게되면 부가기능 코드가 중복으로 작성됨
+
+<br/>
+
+### 다이내믹 프록시
+
+위 문제점 중에 부가기능 코드 중복 문제의 경우에는 코드를 분리해서 해결이 가능하지만, 인터페이스 메소드의 구현과 위임 기능 문제를 해결하기 위해서는 JDK의 다이내믹 프록시를 사용해야 한다. 다이내믹 프록시는 **리플렉션** 기능을 이용해서 프록시를 만들어준다. 리플렉션은 자바의 코드 자체를 추상화해서 접근하도록 만든 것이다. 
+
+<br/>
+
+#### - 다이내믹 프록시를 이용해서 프록시 만들기 - 
+
+**타깃클래스 **
+
+```
+interface Hello {
+	String sayHello(String name);
+	String sayHi(String name);
+	String sayThankYou(String name);
+}
+```
+
+```
+public class HelloTarget implements Hello { //Hello를 구현한 타깃클래스
+	public String sayHello(String name) {
+		return "Hello " + name; 
+	}
+	public String sayHi(String name) {
+		return "Hi " + name; 
+	}
+	public String sayThankYou(String name) {
+		return "Thank You " + name; 
+	}
+}
+```
+
+<br/>
+
+**테스트 클라이언트_1**
+
+```
+@Test
+public void simpleProxy { //Hello 인터페이스를 통해 HelloTarget 오브젝트를 사용하는 클라이언트
+	Hello hello = new HelloTarget(); //타깃은 인터페이스를 통해 접근하는 습관이 중요
+	assertThat(hello.sayHello("sh"), is("Hello sh"));
+	assertThat(hello.sayHi("sh"), is("Hi sh"));
+	assertThat(hello.sayThankYou("sh"), is("Thank You sh"));
+}
+```
+
+<br/>
+
+**프록시 클래스**
+
+- 데코레이터 패턴 적용해서 타깃에 부가기능을 추가. 추가할 기능은 리턴하는 문자를 모두 대문자로 바꿔주는 것
+
+```
+public class HelloUppercase implements Hello { //Hello 인터페이스를 구현한 프록시
+	Hello hello; //위임할 타깃 오브젝트
+	
+	public HelloUppercase(Hello hello) {
+		this.hello = hello;
+	}
+	
+	public String sayHello(String name) {
+		return hello.sayHello(name).toUpperCase(); 
+	}
+	public String sayHi(String name) {
+		return hello.sayHi(name).toUpperCase(); 
+	}
+	public String sayThankYou(String name) {
+		return hello.sayThankYou(name).toUpperCase(); 
+	}
+}
+```
+
+<br/>
+
+**테스트 클라이언트_2**
+
+```
+@Test
+public void simpleProxy { //Hello 인터페이스를 통해 HelloTarget 오브젝트를 사용하는 클라이언트
+	Hello proxiedHello = new HelloUppercase(new HelloTarget()); //프록시를 통해 타깃 오브젝트에 접근
+	assertThat(proxiedHello.sayHello("sh"), is("HELLO SH"));
+	assertThat(proxiedHello.sayHi("sh"), is("HI SH"));
+	assertThat(proxiedHello.sayThankYou("sh"), is("THANK YOU SH"));
+}
+```
+
+<br/>
+
+<I>**이 프록시는 프록시 적용 두 가지 문제를 모두 포함하고 있다. 클래스로 만든 프록시인 ```Hellouppercase``` 를 다이내믹 프록시를 이용해서 만들어보자. **</I>
+
+<br/>
+
+#### <다이내믹 프록시 적용>
+
+> #### 다이내믹 프록시 동작방식
+>
+> (그림 6-13) 
+>
+> <br/>
+>
+> #### 다이내믹 프록시란
+>
+> 프록시 팩로티에 의해 런타임 시 다이내믹하게 만들어지는 오브젝트. 이 오브젝트는 타깃의 인터페이스와 같은 타입으로 만들어진다. 프록시 팩토리에게 인터페이스 정보만 제공해주면 해당 인터페이스를 구현한 클래스의 오브젝트를 자동으로 만들어준다. 
+>
+> 단 프록시로서 필요한 부가기능 제공 코드는 직접 작성해야 한다. 부가기능은 프록시 오브젝트와 독립적으로 ```InvocationHandler``` 인터페이스를 구현한 오브젝트에 담는다. 이 인터페이스는 아래의 ```invoke()``` 메소드 한 개만 가진다. 다이내믹 프록시 오브젝트는 클라이언트의 모든 요청을 리플렉션 정보로 변환해서 ```InvocationHandler``` 구현 오브젝트의 ```invoke()```  메소드로 넘긴다. 
+>
+> ```
+> public Object invoke(Object proxy, Method method, Object[] args)
+> ```
+
+<br/>
+
+**InvocationHandler 구현 클래스**
+
+```
+public class UppercaseHandler implements invocationHandler {
+	Hello target; 
+	
+	public UppercaseHandler(Hello target) {
+		this.target = target; 
+	}
+	
+	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+		String ret = (String) method.invoke(target, args); //타깃으로 위임, 인터페이스의 메소드 호출에 모두 사용
+		return ret.toUpperCase(); //부가기능 제공
+	}
+}
+```
+
+<br/>
+
+**프록시 생성**
+
+- ```InvocationHandler```를 사용하고 ```Hello``` 인터페이스를 구현한다. 
+- 다이내믹 프록시 생성은 ```Proxy``` 클래스의 ```newProxyInsatnce()``` 스태틱 팩토리 메소드를 이용한다. 
+
+```
+Hello proxiedHello = (Hello)Proxy.newProxyInstance(
+	getClass().getClassLoader(), //동적으로 생성되는 다이내믹 프록시 클래스의 로팅에 사용할 클래스로더
+	new Class[] { Hello.class }, //다이내믹 프록시가 구현할 인터페이스
+	new UppercaseHandler(new HelloTraget()); //부가기능과 위임코드를 담은 핸들러
+)
+```
+
+<br/>
+
+#### [정리]
+
+(그림 6-14)
+
+1. Hello 인터페이스를 제공하면서 프록시 팩토리에게 다이내믹 프록시를 만들어달라고 요청한다.
+2. 요청하면 Hello 인터페이스의 모든 메소드를 구현한 오브젝트가 생성된다.
+3. InvocationHandler 인터페이스를 구현한 오브젝트를 제공해준다. 
+4. 다이내믹 프록시가 받은 모든 요청을 InvocationHandler의 invoke() 메소드로 보내준다. 
+5. 모든 메소드에 들어오는 요청을 invoke() 메소드 하나로 처리한다. 
+
+<br/>
+
+
