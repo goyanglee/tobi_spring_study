@@ -314,7 +314,7 @@ public class UserServiceTx implements UserService {
 
 #### - 다이내믹 프록시를 이용해서 프록시 만들기 - 
 
-**타깃클래스**
+**타깃클래스 **
 
 ```
 interface Hello {
@@ -402,7 +402,7 @@ public void simpleProxy { //Hello 인터페이스를 통해 HelloTarget 오브�
 
 > #### 다이내믹 프록시 동작방식
 >
-> ![그림6-13](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20%EC%8A%A4%ED%94%84%EB%A7%81%EC%9D%98%20%EC%9D%B4%ED%95%B4%EC%99%80%20%EC%9B%90%EB%A6%AC/6.%20AOP/6%EC%9E%A5_sh/%E1%84%80%E1%85%B3%E1%84%85%E1%85%B5%E1%86%B76-13.jpeg)
+> (그림 6-13) 
 >
 > <br/>
 >
@@ -454,7 +454,7 @@ Hello proxiedHello = (Hello)Proxy.newProxyInstance(
 
 #### [정리]
 
-![그림6-14](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20%EC%8A%A4%ED%94%84%EB%A7%81%EC%9D%98%20%EC%9D%B4%ED%95%B4%EC%99%80%20%EC%9B%90%EB%A6%AC/6.%20AOP/6%EC%9E%A5_sh/%E1%84%80%E1%85%B3%E1%84%85%E1%85%B5%E1%86%B76-14.jpeg)
+(그림 6-14)
 
 1. Hello 인터페이스를 제공하면서 프록시 팩토리에게 다이내믹 프록시를 만들어달라고 요청한다.
 2. 요청하면 Hello 인터페이스의 모든 메소드를 구현한 오브젝트가 생성된다.
