@@ -320,10 +320,221 @@ Date now = (Date) Class.forName("java.util.Date").newInstance();
 
 #### 팩토리 빈
 
+스프링의 FactoryBean 인터페이스를 구현한 후 스프링의 빈으로 등록하면 팩토리 빈으로 동작한다. 오브젝트를 만들려면 반드시 스태틱 메소드를 사용한다.
+
+private 생성자를 가진 클래스도 빈으로 등록해주면 리플렉션을 이용해 오브젝트를 만들어주긴 하지만 private 특성상 뭔가 이유가 있기 때문에 만들어지기 때문에 권장되진 않는다.
+
 ```java
-public interface FactoryBean<T> {
-	T getObject() throws Exception;//빈 오브젝트 생성 후 반환
-	Class<? extends T> getObjectType();//생성되는 오브젝트의 타입
-	boolean isSingleton();//오브젝트가 싱글톤인지 확인
+public class MessageFactoryBean implements FactoryBean<Message> {
+	string text;
+	setter
+	public Message getObject() {
+		return Message.newMessage(this.text);
+	}
 }
+```
+
+#### 다이나믹 프록시 팩토리 빈
+
+Proxy의 newProxyInstance() 로만 생성이 가능하기 때문에 일반적인 방법으로는 스프링의 빈으로 등록할 수 없다. 대신 팩토리 빈을 사용한다.
+
+스프링 빈에는 팩토리 빈과 UserServiceImpl만 빈으로 등록한다. 
+
+#### 트랜잭션 프록시 팩토리 빈
+
+```java
+public class TxProxyFactoryBean implements FactoryBean<Object> {
+	Object target;
+	PlatformTransationManager transactionManager;
+	String pattern;
+	Class<?> serviceInterface;//다이나믹 프록시를 생성할 떄 필요하다.
+	setter 들
+	public Object getObject() {
+		TransactionHandler txHandler = new TransactionHandler();
+		target, transactionManager, pattern setter
+	return Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] {serviceInterface}, txHandler);
+	}
+}
+```
+
+##### 테스트
+
+ApplicationContext를 autowired해서 팩토리빈을 가져온다.
+
+메소드 위에 @DirtiesContext 어노테이션을 붙인다.
+
+### 프록시 팩토리 빈 방식의 장점과 한계
+
+**장점**
+
+1. 타깃의 타입에 관계없이 팩토리 빈을 재사용할 수 있다.
+
+**단점**
+
+1. 프록시 클래스를 일일이 만들어야 한다.
+2. 부가적인 기능이 반복되어서 중복 코드가 발생한다.
+
+**한계**
+
+1. 한번에 여러 클래스에 공통적인 부가기능을 제공하는 일이 불가능하다.
+
+## 스프링의 프록시 팩토리 빈
+
+### ProxyFactoryBean
+
+ 프록시를 생성하는 작업만을 담당하고 프록시를 통해 제공해줄 부가기능은 별도의 빈에 둘 수 있다. 부가기능은 MethodInterceptor 인터페이스를 구현한다. InvocationHandler와의 다른 점은 타깃 오브젝트에 대한 정보도 알 수 있다는 점이다.
+
+#### 어드바이스
+
+MethodInvocation은 일종의 콜백 오브젝트로, 타깃 오브젝트의 메소드를 proceed() 를 통해 내부적으로 실행해주는 기능이다. Advice 인터페이스를 상속하고 있고, 메소드 실행을 가로채는 방식 외에 부가기능을 추가하는 여러 방식을 제공하고 있다. 이처럼 부가기능을 담은 오브젝트를 어드바이스라고 한다.
+
+#### 포인트컷
+
+메소드 선정 알고리즘을 담은 오브젝트. 프록시에 주입되어서 사용된다. 스프링의 빈으로 등록 가능하다.
+
+어떤 어드바이스에 어떤 포인트컷을 적용시킬 지 모르기 때문에 각기 다른 메소드 선정방식으로 어드바이스가 등록될 수 있도록 advisor를 사용한다.
+
+어드바이저 = 포인트컷 + 어드바이스 
+
+### ProxyFactoryBean 적용
+
+```java
+public class TransactionAdvice implements MethodInterceptor {
+	public Object invoke(MethodInvocation invocation) {
+		트랜잭션 겟
+		Object ret = invocation.proceed();//콜백을 호출해서 타깃의 메소드를 실행한다.
+		return ret;
+	}
+}
+```
+
+![그림6-19](url)
+
+## 스프링의 AOP
+
+아직까지 타깃 오브젝트마다 ProxyFactoryBean 빈 설정 정보를 추가해주는 부분이 생기는 중복 문제가 존재한다.
+
+### 중복문제를 해결 : 빈 후처리기
+
+BeanPostProcessor 인터페이스를 구현한 빈 후처리기 중 하나인 DefaultAdvisorAutoProxyCreator는 어드바이저를 이용한 자동 프록시 생성기이다.  스프링에 빈으로 등록이 되어 있으면 빈 오브젝트가 생성될 때마다 빈 후처리기에 보내서 후처리 작업을 한다. 등록된 모든 어드바이저 내의 포인트컷을 이용해 프록시 적용 대상인지 확인해서 어드바이저를 연결해준다. 
+
+### 포인트컷은 어떻게 적용될까?
+
+포인트컷은 클래스 필터와 메소드 매처 두 가지를 돌려주는 메소드를 갖고 있다.
+
+```java
+public interface Pointcut {
+	ClassFilter getClassFilter(); //프록시를 적용할 클래스 확인
+	MethodMatcher getMethodMatcher();//어드바이스를 적용할 메소드인지 확인
+}
+```
+
+프록시를 적용할 클래스인지 판단하고 나서 적용 대상 클래스라면 어드바이스를 적용할 메소드인지 확인하는 흐름이다.
+
+### 적용
+
+#### 클래스 필터 적용
+
+NameMatchMethodPointcut을 상속해서 ClassFilter를 추가한다.
+
+```java
+public class NameMatchClassMethodPointcut extends NameMatchMethodPointcut{
+	mappedClassName setter
+	static class SimpleClassFilter implements ClassFilter {
+		mappedName setter
+		public boolean matches(Class<?> clazz) {
+			return PatternMatchUtils.simpleMatch(mappedName, class.getSimpleName());
+		}
+	}
+}
+```
+
+#### 어드바이저 이용하는 자동 프록시 생성기를 빈으로  등록 
+
+#### 포인트컷 빈 등록
+
+#### 어드바이스와 어드바이저
+
+DefaultAdvisorAutoProxyCreator에 의해 어드바이저는 자동으로 수집되고 프록시 대상 선정 과정에 참여하여 자동생성된 프록시에 다이나믹하게 주입되어 동작한다.
+
+- $기호를 사용하면 스태틱 멤버 클래스를 지정할 수 있다.
+
+#### 확인
+
+1. 트랜잭션이 필요한 빈에 트랜잭션 부가기능이 적용됐는지?
+2. 아무 빈에나 트랜잭션 부가기능이 적용된 것은 아닌지?
+
+### 포인트컷
+
+#### 포인트컷 표현식 = AspectJ 포인트컷 표현식 
+
+1. 지시자 : 
+    1. execution()
+    2. bean()
+    3. annotation()
+2. 문법
+    1. [ ] : 생략 가능한 옵션 항목
+    2. | :or
+
+**예제**
+
+execution([접근제한자 패턴] 타입패턴 [타입패턴.] 이름패턴(타입패턴 |”..”,...)
+
+접근제한자 : private, public,..
+
+타입패턴 : 리턴값의 타입 패턴
+
+타입패턴. : 패키지와 클래스 이름에 대한 패턴. 생략 가능. 온점을 붙여서 연결해야한다.
+
+이름패턴 : 메소드 이름 패턴
+
+타입 배턴|”..”,... : 파라미터의 타입 배턴을 순서대로 입력
+
+```java
+System.out.println(Target.class.getMethod("minus", int.class, int.class)));
+->
+public int springbook.learningtest.pointcut.Target.minus(int,int) throws java.lang.RuntimeException
+```
+
+- execution(* *..*ServiceImpl.upgrade*(..)) 로 되어있을 때 TestUserService가 등록이 되었다?
+- 왜냐하면 타입 패턴이 슈퍼클래스에 UserServiceImple가 적용되었기 때문이다.
+
+### AOP란 무엇일까?
+
+애스펙트 : 어드바이스 + 포인트컷. 핵심적인 기능에서 부가기능을 분리한 모듈 
+
+### AOP 적용 기술
+
+1. 스프링 AOP는 프록시 방식을 이용
+2. AspectJ의, 바이트코드 직접을 수정하는 방식 
+    1. 손쉽다.
+    2. 유연하다.
+
+### 용어
+
+1. 타깃 : 부가기능을 부여할 대상
+2. 어드바이스 : 타깃에게 제공할 부가기능을 담은 모듈
+    1. 메소드 호출 전반에 참여하는 것
+    2. 예외가 발생했을 때만 동작하는 것
+3. 조인 포인트 : 어드바이스가 적용될 수 있는 위치
+4. 포인트컷 : 어드바이스를 적용할 조인 포인트를 선별하는 적업 혹은 모듈
+5. 프록시 : 클라이언트와 타깃 사이에 투명하게 존재하면서 부가기능을 제공하는 오브젝트
+6. 어드바이저 : 포인트컷과 어드바이스를 하나씩 갖고 있는 오브젝트
+7. 애스펙트 : AOP의 기본 모듈로 포인트컷과 어드바이스의 조합
+
+### AOP 네임스페이스
+
+1. 자동 프록시 생성기 : 스프링의 DefaultAdvisorAutoProxyCreator 를 빈으로 등록하고 주입 받지도, 하지도 않는다.
+2. 어드바이스 : 부가기능을 구현한 클래스를 빈으로 등록한다.
+3. 포인트컷 : AspectJExpressionPointcut을 빈으로 등록
+4. 어드바이저 : DefaultPointcutdvisor클래스를 빈으로 등록한다.
+
+스프링은 간편한 방법으로 등록할 수 있도록 aop와 관련된 태그를 정의해둔 스키마를 제공한다. (xml)
+
+#### 어드바이저 내장 포인트컷
+
+```xml
+<aop:config>
+<aop:advisor advice-ref="transactionAdvice" pointcut="execution(* *..*ServiceImpl.upgrade*(..))"/>
+</aop:config>
 ```
