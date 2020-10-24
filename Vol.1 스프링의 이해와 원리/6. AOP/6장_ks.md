@@ -538,3 +538,73 @@ public int springbook.learningtest.pointcut.Target.minus(int,int) throws java.la
 <aop:advisor advice-ref="transactionAdvice" pointcut="execution(* *..*ServiceImpl.upgrade*(..))"/>
 </aop:config>
 ```
+
+## 트랜잭션 속성
+### 트랜잭션 정의 (DefaultTransactionDefinition)
+트랜잭션은 더 이상 쪼갤 수 없는 최소 단위의 작업이다. 트랜잭션의 경계 안에서 진행된 작업은 모두 성공하던지 모두 취소되어야 한다. 
+#### 트랜잭션 전파 (transaction propagation)
+트랜잭션 경계에서 이미 진행 중인 트랜잭션이 있을 때 또는 없을 때 어떻게 동작할 것인지를 결정한다. 예를 들어서 A 트랜잭션이 시작해서 동작하고 있는 와중에 B트랜잭션을 시작한다면?
+1. 만약 A트랜잭션에 참여시킨다면 예외가 발생했을 때 전부 다 취소된다. 하나로 묶여있기 때문이다.
+2. 무관하게 독립적인 트랜잭션으로 만들 경우 B트랜잭션이 완료되면 B의 작업만은 완료(성공이든 실패든)된다.
+
+**전파 속성**
+1. PROPAGATION_REQUIRED
+가장 많이 사용된다. 진행 중인 트랜잭션이 없으면 새로 시작하고, 이미 있으면 참여시킨다.
+2. PROPAGATION_REQUIRES_NEW
+항상 새로운 트랜잭션을 시작한다.
+3. PROPAGATION_NOT_SUPPORTED
+트랜잭션 없이 동작한다. 진행 중인 트랜잭션은 무시한다. AOP를 이용해서 모든 메소드에 동시에 적용시키기 때문에 이 속성을 의도적으로 부여함으로서 해당 메소드만 적용시킨다.
+
+** 격리 수준(Isolation level)**
+트랜잭션들을 진행하면서 문제가 발생하지 않게 제어한다. 보통 데이터베이스에 설정되어 있다. 트랜잭션 단위로 격리 수준을 조정할 수 있다. 기본값은 **ISOLATION_DEFAULT** 이고, DataSource에 설정되어있는 기본값을 따른다.
+
+**제한시간 (time out)**
+기본 값은 제한시간이 없다. 트랜잭션을 직접 시작할 수 있는 PROPAGATION_REQUIRED나 PROPAGATION_REQUIRES_NEW와 함께 사용해야만 의미가 있다.
+
+**읽기 전용(Read only)**
+트랜잭션 내에서 데이터를 조작하는 시도를 막을 수 있다.
+
+### 트랜잭션 인터셉터와 속성
+#### TransactionInterceptor
+rollbackOn() 이라는 속성을 사용해서 특정 예외에 대해서 트랜잭션을 롤백시킬수도, 커밋시킬수도 있다. 이러한 TransactionAttribute를 Properties라는 맵 타입 오브젝트로 전달받아서 각기 다른 트랜잭션 속성을 부여한다.
+#### 메소드 이름 패턴을 이용해 트랜잭션 속성 지정 
+PROPAGATION_NAME, ISOLATION_NAME, readOnly, timeout_NNNN, -Exception1, +Exception2
+1. PROPAGATION_NAME : 트랜잭션 전파방식. PROPAGATION_으로 시작하고 필수항목이다.
+2. ISOLATION_NAME : 격리수준, ISOLATION_으로 시작. 생략되면 기본값
+3. readOnly : 읽기전용. 디폴트는 읽기전용이 아니다.
+4. timeout_NNNN : 제한시간. timeout_으로 시작하고 초단위 시간을 뒤에 붙인다.
+5. -Exception1 : 체크예외 중에서 롤백 대상으로 추가할 것을 넣는다.
+6. +Exception2: : 런타임 예외지만 롤백 시키지 않을 예외
+
+> 단순 조회 작업만 하는 메소드에도 모두 트랜잭션을 적용하면 성능 향상을 가져올 수 있다. 복잡한 조회의 경우에는 제한시간을 지정해줄수도 있다. 
+
+> 타깃 오브젝트 내에서 다른 메소드를 호출하는 경우 프록시를 거치지 않고 직접 호출되기 때문에 트랜잭션 속성이 전혀 반영되지 않는다.
+> ![그림6-23](url)
+> 해결 1. 스프링 API 를 이용해 같은 오브젝트의 메소드 호출도 프록시를 이용하도록 강제한다.
+> AspectJ와 같은 타깃의 바이트 코드를 직접 조작하는 AOP기술을 적용한다.
+
+### 속성 적용
+#### 트랜잭션 경계설정의 일원화 
+특정 계층의경계와 트랜잭션 경계를 일치시키는 것이 좋다(?). 서비스 계층을 트랜잭션이 시작되고 종료되는 경계로 정했다면 다른 계층에서 DAO에 직접 접근하는 거을 차단한다. 
+
+## 트랜잭션 어노테이션 속성과 포인트컷 
+### @Transactional
+메소드, 클래스, 인터페이스에 사용할 수 있다. 
+**우선순위** 메소드 > 클래스 > 인터페이스의 메소드 > 인터페이스
+
+## 트랜잭션 지원
+### 선언적 트랜잭션과 전파 속성
+AOP를 이용해 코드 외부에서 트랜잭션의 기능을 부여해주고 속성을 지정할 수 있게 하는 방법은 **선언적 트랜잭션(declarative transaction)**이라고 한다. 반대로 개별 데이터 기술의 트랜잭션 api를 사용해 직접 코드 안에서 사용하는 방법을 **프로그램에 의한 트랜잭션(programmatic transaction)**이라고 한다. 특별한 경우가 아니라면 선언적 트랜잭션을 사용한다.
+
+```java
+DefaultTransactionDefinition txDefinition = new DefaultTransactionDefinition();
+TransactionStatus txStatus = transactionManager.getTransaction(txDefinition);//트랜잭션 매니저에서 트랜잭션을 가져온다.
+userService.deleteAll();
+userService.add();
+
+transactionManager.commit(txStatus); //앞에서 시작한 트랜잭션을 커밋한다.
+
+```
+
+#### @TransactionConfiguration
+클래스레벨에 부여하며 설정값을 모두 적용시킬 수 있다. @NotTransactional을 사용하면 적용된 메소드만 예외로 영향을 받지 않는다.
