@@ -287,7 +287,7 @@ DI를 적용하려면 커다란 오브젝트 하나만 존재해서는 안되고
 
 예를 들어, 아래와 같은 인터페이스를 통해 구성된 구조가 있다. 
 
-(그림 7-10)
+![그림7-10](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20%EC%8A%A4%ED%94%84%EB%A7%81%EC%9D%98%20%EC%9D%B4%ED%95%B4%EC%99%80%20%EC%9B%90%EB%A6%AC/7.%20%EC%8A%A4%ED%94%84%EB%A7%81%20%ED%95%B5%EC%8B%AC%20%EA%B8%B0%EC%88%A0%EC%9D%98%20%EC%9D%91%EC%9A%A9/7%EC%9E%A5_sh/7-10.jpeg)
 
 - BaseSqlService는 SqlRegistry 라는 인터페이스를 통해 MySqlRegistry 클래스의 오브젝트에 접근한다. 따라서 MySqlRegistry의 구현 내용이 변경을 통해 기능이 추가될지라도 BaseSqlService 클래스는 변경 없이 유지될 수 있다. 
 
@@ -325,7 +325,7 @@ public interface UpdatableSqlRegistry extends SqlRegistry {
 
 최종 의존관계는 아래처럼 된다. 
 
-(그림 7-11)
+![그림7-11](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.1%20%EC%8A%A4%ED%94%84%EB%A7%81%EC%9D%98%20%EC%9D%B4%ED%95%B4%EC%99%80%20%EC%9B%90%EB%A6%AC/7.%20%EC%8A%A4%ED%94%84%EB%A7%81%20%ED%95%B5%EC%8B%AC%20%EA%B8%B0%EC%88%A0%EC%9D%98%20%EC%9D%91%EC%9A%A9/7%EC%9E%A5_sh/7-11.jpeg)
 
 <br/>
 
