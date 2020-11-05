@@ -129,3 +129,54 @@ XmlSqlService sqlProvider = new XmlSqlService();
 sqlProvider.setSqlmapFile(“~.xml”);
 sqlProvider.loadSql();
 ```
+
+@PostContruct : 이 어노테이션을 메소드 위에 붙여주면 빈 오브젝트를 생성하고 주입작업이 끝난 후 자동으로 실행해준다.
+**스프링 컨테이너 초기 작업 순서**
+1. xml 빈 설정을 읽는다.
+2. 빈의 오브젝트를 생성한다.
+3. 프로퍼티에 의존 오브젝트 또는 값을 주입한다.
+4. 빈이나 태그로 등록된 후처리기를 동작시킨다. 
+
+### 인터페이스 분리
+책임에 따라서
+#### SqlRegistry 인터페이스 
+#### SqlReader 인터페이스
+
+### 자기참조 빈
+위에 분리한 인터페이스와 더불어 본인도 인터페이스로 만든 다음 이 세 인터페이스를 구현한 인터페이스를 사용한다.
+
+### 디폴트 의존관계
+setter, 생성자로 값을 세팅해주기 전 디폴트로 수행할 값을 세팅해준다.
+```java
+public class JaxbXmlSqlReader implements SqlReader {
+	private static final String DEFAULT_FILE=“sqlmap.xml”;
+	public setter(~);
+}
+```
+
+## 서비스 추상화 
+OXM(Object-XML Mapping) 라이브러리는 여러 개가 있다. 
+1. jaxb
+2. castor xml
+3. jibx
+4. xmlbeans
+5. xstream
+이들 별로 확장하는 방법은
+```java
+public class OxmlSqlService implements SqlService {
+	private final OxmlSqlReader reader = new OxmSqlReader(); //디폴트
+
+public setter();
+}
+```
+
+### 리소스 추상화
+리소스는 빈이 아니라 값 그 자체로 사용되는 클래스다. 거의 모든 api는 외부의 리소스 정보가 필요할 때에는 항상 이 리소스 추상화를 이용한다.
+
+## 인터페이스 상속을 통해 기능 확장 
+서버가 재시작하지 않고 긴급하게 sql을 변경해 반영해보자. 우리가 이전에 했던 작업들처럼 di 확장을 사용해보자
+
+### 인터페이스를 확장하는 이유
+1. 다형성을 얻기 위해.
+2. 인터페이스 분리 원칙을 통해 의존 관계를 명확하게 하기 위해.
+3. 
