@@ -60,4 +60,16 @@ public interface ApplicationContext extends ListableBeanFactory, HierarchicalBea
 
 <br/>
   
+### 빈 설정 메타정보 작성법: "컨테이너는 어떻게 자신이 만들 오브젝트가 무엇인 지 알 수 있을까?"
+
+컨테이너는 빈 설정 메타정보를 통해 빈의 클래스와 이름을 얻는다. 설정 메타정보는 파일이나 어노테이션 같은 리소스로부터 전용 리더를 통해 읽혀서 BeanDefinition 타입의 오브젝트로 변환되고 이 정보를 컨테이너가 사용한다. 
+
+BeanDefinition = 순수한 오브젝트 = 빈 생성정보 : XML문서/애노테이션/자바코드로 생성 가능
+
+- 컨테이너가 빈 생성할 때 필요한 핵심정보 포함
+- 빈 생성 재사용 가능 즉, 설정정보는 동일하지만 이름이 다른 여러 개의 빈 오브젝트 생성 가능 -> 빈 이름이나 아이디 정보는 포함되지 않고 컨테이너에 등록될 때 이름 부여가능
+- [메타정보] beanClassName / parentName / factoryBeanName / factoryMethodName / scope / dependsOn / autowireCandidate / primary / abstract / autowireMode / dependencyCheck / initMethod / destroyMethod / propertyValues / constructorArgumentValues / annotationMetadata 
+
+<br/>
+
 
