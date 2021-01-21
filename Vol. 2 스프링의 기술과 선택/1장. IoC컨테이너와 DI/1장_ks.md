@@ -82,7 +82,7 @@ DispatcherServlet 선언
 ### 빈 설정 메타 정보
 
 |이름|내용|디폴트|
-|——---|———|————|
+|----|----|----|
 |beanClassName |빈 오브젝트 클래스 명 | 없음. 필수값|
 |parentName|부모 BeanDefinition의 이름|없음|
 |factoryBeanName| 팩토리를 사용해 빈을 생성하는 경우 팩토리 빈의 이름 | 없음|
