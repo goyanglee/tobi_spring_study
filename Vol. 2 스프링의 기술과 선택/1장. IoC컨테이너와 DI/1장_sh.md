@@ -72,4 +72,49 @@ BeanDefinition = 순수한 오브젝트 = 빈 생성정보 : XML문서/애노테
 
 <br/>
 
+#### 빈 등록 방법 : 빈메타정보 -> 컨테이너
+
+1. XML <bean> 태그 사용 -> 세밀한 제어 가능
+
+2. 다양한 스키마에 정의된 태그 사용 -> 핵심코드 빈과 컨테이너 또는 서비스 설정 빈을 구분할 수 있음 (ex. <aop>)
+
+3. 스테레오타입 어노테이션+빈 스캐너
+
+   > 빈 스캐너에 내장된 디폴트 필터는 @Component 어노테이션 또는 @Component를 메타 어노테이션으로 가진 어노테이션이 부여된 클래스를 선택하도록 되어있다. 이것을 사용해서 @Component를 지정하는 것만으로도 빈 등록이 가능한 것
+
+4. 자바코드 : @Configuration, @Bean 사용
+
+<br/>
+
+#### 빈 의존관계 메타정보 작성방법 
+
+1. XML: <property>로 수정자 주입, <constructor-args>로 생성자 주입
+
+2. 자동와이어링: 이름을 사용하거나 또는 타입을 사용
+
+3. XML 네임스페이스와 전용태그 사용
+
+4. @Resource을 통해 주입할 빈을 아이디로 지정
+
+5. @Autowired / @Inject
+
+   > @Autowired : 스프링 2.5부터 적용된 스프링 전용 어노테이션
+   >
+   > @Inject : JavaEE6 표준스펙인 JSR-330에 정의되어 있는 것으로 스프링 외에도 JavaEE6 스펙을 따르는 프레임워크에서 사용가능
+   >
+   > - 스프링으로 개발한 POJO를 다른 환경에서도 사용할 가능성이 있으면 @Inject 사용하는 것을 추천
+   > - 스프링만 사용한다면 둘 중 아무거나 사용하되, 일관되게 사용할 것
+
+6. 자바코드 : @Configuration, @Bean 사용 
+
+<br/>
+
+#### 컨테이너가 자동등록하는 빈
+
+- ApplicationContext, BeanFactory : 컨테이너 자신을 빈으로 등록해두고 필요할 때 일반 빈에서 주입받아 사용
+- ResourceLoader, ApplicationEventPublisher : 서버환경에서 다양한 Resource를 로딩할 수 있는 기능을 지원
+- systemProperties, systemEnvironment
+  - systemProperties : System.getProperties() 메소드가 반환하는 Properties 타입의 오브젝트를 읽기전용으로 접근할 수 있게 만든 빈 오브젝트. 시스템 프로퍼티 읽을 수 있음. JVM이 직접 정의해줌
+  - systemEnvironment : System.getenv()에서 제공하는 환경변수가 담긴 Map 오브젝트. 환경변수 이름은 os 종류나 서버환경 설정에 따라 달라질 수 있으므로 주의
+
 
