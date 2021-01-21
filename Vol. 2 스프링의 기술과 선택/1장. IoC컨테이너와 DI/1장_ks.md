@@ -80,8 +80,9 @@ DispatcherServlet 선언
 
 ## 빈 설정 메타정보 작성
 ### 빈 설정 메타 정보
-| 이름  |  내용  |  디폴트 |
-|——|———|————|
+
+|이름|내용|디폴트|
+|——---|———|————|
 |beanClassName |빈 오브젝트 클래스 명 | 없음. 필수값|
 |parentName|부모 BeanDefinition의 이름|없음|
 |factoryBeanName| 팩토리를 사용해 빈을 생성하는 경우 팩토리 빈의 이름 | 없음|
@@ -160,6 +161,215 @@ Ex) autowire=“byType” 이나 default-autowire=byType”
 xml은 가독성이 안좋다. 의존관계를 바로 파악하기 어려울 수 있다. 
 하나의 빈에 대해 한 가지 자동와이어링 방식밖에 지정할 수 없다.
 
+#### 어노테이션으로 빈의 의존관계를 정의하는 방법
+##### @Resource
+
+```java
+@Resource(name=“printer”)
+Public void setPrinter(Printer printer) {
+this.printer=printer;
+
+//혹은 필드 주입
+
+@Resource
+Private DataSource dataSource;
+}
+```
+
+수정자 메소드가 없이도 빈을 주입할 수 있다.
+@Resource를 사용하기 위해 3가지 방법을 사용할 수 있다.
+1. Xml <context:annotation-config>
+2. Xml <context:compoenent-scan>
+3. AnnotationConfigApplication / AnnotationConfigWebApplicationContext
+
+만약, 참조할 빈이 없으면 예외가 발생한다. name을 지정하지 않은 경우 디폴트 이름으로 참조하고, 그래도 없으면 타입으로 다시 빈을 찾는다. 
+
+##### @Autowired / @Inject 
+@Autowired는 스프링 전용 어노테이션이다. 이름 대신 필드나 프로퍼티 타입을 이용해 후보 빈을 찾는다. 그래서 같은 타입이 여러개일 경우 문제가 발생한다. 그럴 땐 같은 타입을 아래와 같이 모두 주입시켜줄 수 있다.
+1. 수정자 메소드와 필드 
+2. 생성자 
+3. 일반 메소드 
+```java
+@Autowired
+Public void config(SqlReader sqlReader, SqlRegisitry sqlRegistry) {
+	this.sqlReader = sqlReader;
+	this.sqlRegistry = sqlRegistry;
+}
+```
+
+```java
+@Autowired
+Collection<Printer> printers;
+
+@autowired
+Printer[] printers;
+
+@Autowired
+Map<String, Printer> printerMap; //<빈 아이디, 빈 오브젝트>
+```
+
+@Qulifier를 사용해서 빈을 한정지을 수 있다. 빈 이름과 별도로 추가적인 메타정보를 지정하고 사용할 수 있도록 한다. 이 외에도 빈에 부가적인 속성을 지정해주는 기능도 있어서 새로운 어노테이션을 생성해 지정해주는 경우도 있다.
+1. 필드
+2. 수정자
+3. 파라미터
+```java
+@Autowired
+@Qualifier(“mainDb”)
+Datasource dataSource;
+```
+
+```java
+@Target(~)
+@Retention(~)
+@Qulifier
+Public @interface Database {
+String value();
+} 
+
+@Autowired
+@Database(“main”)
+DataSource dataSource;
+```
+
+
+@Inject는 자바 표준 어노테이션이기 때문에 다른 프레임워크에서도 사용할 수 있다.
+
+
+보통 이름으로 빈을 지정하는 경우 @Resource를, 타입으로 지정하는 경우엔 @Autowired를 사용한다.
+
+
+#### 자바코드에 의한 의존관계 설정
+1. 빈 메소드 호출 
+```java
+@Configuration //필수 
+Public class Config {
+	@Bean public Hello hello() {
+		new Hello().setPrinter(printer());
+	}
+
+	@Bean public Printer printer() {
+		return new Printer(); //싱글톤처럼 동작.
+	}
+}
+
+
+```
+
+2. 메소드 자동 와이어링 
+```java
+@Configuration
+Public class Config {
+	@Bean public Hello hello(Printer printer) { //printer() 메소드에 의해 선언된 빈 printer가 @Autowried 한 것처럼 제공된다.
+		new Hello().setPrinter(printer);
+	}
+
+	@Bean public Printer printer() {
+		return new Printer();
+	}
+}
+```
+
+#### 빈 의존관계 설정 전략 
+1. Xml 단독 
+2. Xml + 어노테이션 
+3. 어노테이션 단독 
+
+### 프로퍼티 값 설정 방법 
+1. 단순 값 : 빈이 아닌 모든 것
+2. 빈 오브젝트의 레퍼런스 
+
+#### xml <property> 
+
+```xml
+<bean~>
+	<property name=“name” value=“everyone”/>
+</bean>
+```
+
+#### @Value
+런타임 시 단순 값이나 오브젝트를 설정을 통해 주입 
+```java
+@Value(“${property name}”)
+Public void setName(String name) {this.name=name;}
+```
+
+```xml
+<property name=“” value=“${db.driverclass}”/>
+```
+<context:property-placeholder> 태그에 의해 자동으로 등록되는 PropertyPlaceHolerConfigurer 빈이 ${}의 치환자를 찾아 변경해준다. 
+혹은 SpEL을 사용하면 능동적으로 직접 접근해서 값을 가져온다.
+```xml
+<property name=“” value=“#{db.driverclass}”/>
+```
+
+둘의 차이점은, ${}은 수동적으로 치환하다보니 오타가 나도 예외가 발생하지 않지만, #{}은 능동적으로 값을 찾기떄문에 문제가 생기면 바로 예외가 발생한다. 
+
+### 컨테이너가 자동으로 등록하는 빈 
+1. ApplicationContext, BeanFactory 
+2. ResourceLoader, ApplicationEventPublisher 
+ApplicationEventPublisher는 이벤트를 발생시키는 publishEvent() 메소드를 가진 인터페이스. 
+3. systemProperties, systemEnvironment
+```java
+@Resource Properties systemProperties;
+
+@Value(“#{systemProperties[‘os.name’]}”) string osName;
+
+@Value(“#[systemEnvirionment[‘Path’]]”) String path;
+```
+
+## 프로토타입과 스코프
+스코프 : 존재할 수 있는 범위. 빈의 스코프는 빈 오브젝트가 만들어져 존재할 수 있는 범위.
+스프링은 기본적으로 싱글톤으로 만들어지지만 때로는 싱글톤이 아닌 객체로 만들어서 사용해야하는 경우가 있다. 싱글톤 스코프는 컨텍스트당 한 개의 빈 오브젝트가 생성된다.
+### 프로토타입 스코프 
+```java
+@Scope(“prototype”)
+Static class ~
+```
+IoC의 기본 원칙을 따르지 않고, 요청이 있을 때마다 컨테이너가 생성하고 초기화하고 di를 해주지만 제공이 되고 나면 더이상 관리하지 않는다. 다시 컨테이너가 관리하는 범위로 들어가지도 않는다. 요청한 곳에서 사용이 다하면 메소드가 끝나고 사라진다.
+주로 독립적으로 오브젝트를 생성해서 상태를 저장하고 있어야하는 경우, new 키워드를 사용하는 경우이다. 폼에서 입력받은 정보를 잠시 사용할 때 주로 사용한다.
+프로토타입의 빈은 di로 잘 사용하지 않고 주로 dl을 사용해서 오브젝트를 받아서 사용한다.
+
+### 스코프 빈
+1. 요청 스코프 
+웹 요청 안에서 만들어지고 해당 요청이 끝날 때 제거된다. 요청 별로 독립적인 빈이 만들어지기 때문에 상태 값을 저장하기에 안전하다. DL, DI 모두 사용 가능하다. 
+
+2. 세션스코프, 글로벌세션 스코프 
+http 세션과 같은 존재 범위를 갖는 빈으로 만들어준다. 사용자 별로 만들어져서 브라우저를 닫거나 세션타임이 종료될때까지 유지되기 때문에 로그인 정보 등을 저장한다. 글로벌세션 스코프는 포틀릿에만 존재하는 글로벌 세션에 저장되는 빈이다. 
+
+3. 애플리케이션 스코프 
+서블릿 컨텍스트에 저장되는 빈 오브젝트. 웹 어플리케이션마다 만들어지며 싱글톤 스코프와 비슷한 존재 범위를 갖는다. 드물지만 웹 애플리케이션과 애플리케이션 컨텍스트의 존재 범위가 다른 경우에 사용된다.
+
+### 사용 방법 
+위의 세 스코프빈은 프로토타입 빈과 마찬가지로 DL 을 사용한다. DI를 사용하는 경우 직접 스코프 빈을 주입하는 대신 스코프 빈에 대한 프록시를 di 해준다.
+
+```java
+@Scope(value=“session”, proxyMode=ScopedProxyMode.TARGET_CLASS)
+Public class LoginUser
+
+
+@Autowired LoginUser loginUser; //프록시가 주입된다.
+```
+
+## 기타 빈 설정 메타 정보
+1. 빈 이름 
+    1. Id
+    2. Name
+2. 빈 생명주기 메소드 
+    1. 초기화 메소드
+        1. 초기화 콜백 인터페이스 - afterPropertiesSet()
+        2. Init-method
+        3. @PostConstruct
+        4. @Bean(init-method)
+    2. 제거 메소드
+        1. 제거 콜백 메소드 destory()
+        2. Destroy-method
+        3. @PreDestroy
+        4. @Bean(destroyMethod)
+    3. 팩토리 빈과 팩토리 메소드 
+        1. FactoryBean 인터페이스 
+        2. 스태틱 팩토리 메소드 
+        3. 인스턴스 팩토리 메소드
+        4. @Bean 메소드
 
 
 
