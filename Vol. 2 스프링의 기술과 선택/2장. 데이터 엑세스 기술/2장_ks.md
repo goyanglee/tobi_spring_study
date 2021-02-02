@@ -70,3 +70,58 @@ BeanPropertySqlParameter params = new BeanPropertySqlParameter(new Member(1,"spr
 -> 실행하는 경우 
 simpleJdbcTemplate.update("insert ~ values(:id, :name)", params);
 ```
+
+## iBatis SqlMaps
+
+## JPA
+Java Persistent API의 약자로, 영속성 관리와 ORM 을 위한 표준 기술. 오브젝트를 가지고 정보를 다루면 ORM 프레임워크가 이를 적절한 형태로 변환해주는 기술. 
+
+### EntityManagerFactory 등록 
+EntityManager는 
+1. 애플리케이션이 관리하는 EntityManager
+2. 컨테이너가 관리하는 EntityManager
+가 있다.
+
+#### EntityManagerFactory 등록 방법 1. LocalEntityManagerFactoryBean
+PersistentProvider 자동 감지 기능을 이용해 프로바이더를 찾고 META-INF/persistence.xml 에 담긴 퍼시스턴스 유닛의 정보를 활용해 EntityManagerFactory를 생성한다. 
+단점 : 스프링 빈으로 등록한 DataSource를 사용할 수 없다. 바이트코드 위빙 기법도 사용할 수 없다.
+따라서 실전에선 사용하지 않는다.
+#### EntityManagerFactory 등록 방법 2. JAVAEE 5 가 제공하는 EntityManagerFactory 
+JNDI를 통해 EntityManager, EntityManagerFactory를 제공받을 수 있고, JTA를 이용해 트랜잭션 관리 기능을 활용할 수 있다. META-INF/persistenct.xml 으로 퍼시스턴스 유닛을 설정한 후 
+```xml
+<jee:jndi-lookup id="emf" jndi-name="persistenct/myPersistenctUnit"/>
+```
+로 빈 등록 기능을 이용한다.
+장점 : JavaEE에서 사용되도록 개발된 JPA 모듈 그대로 사용할 수 있다.
+#### EntityManagerFactory 등록 방법 3. LocalContainerEntityManagerFactoryBean 
+JavaEE 가 아니어도 컨테이너에서 동작하는 JPA 와 그 이상 확장된 기능들을 사용할 수 있다.
+빈으로 등록된 dataSource를 프로퍼티에 지정해주면 된다. 
+* persistenctUnitName : 많은 퍼시스턴스 유닛들 중에 사용할 유닛을 지정 
+* persistenceXmlLocation : 디폴트 위치(META-INF) 외의 경로를 사용할 경우 사용 
+* jpaProperties, jpaPropertyMap
+* jpaVendorAdapter : vendor 설정 
+* loadtimeWeaver : 엔티티 클래스의 바이트코드를 직접 조작해서 확장된 기능 추가 = 바이트코드 향상 기법 
+1. 바이트코드를 빌드 중에 변경 
+2. 런타임 시에 바이트코드를 메모리에 로딩하면서 변경  = 로드타임 위버. 로드타임 위빙
+#### 트랜잭션 매니저 
+```xml
+<bean id="transactionManager" class="org.springframework.orm.jpa.JpaTransactionManager">
+<property name="entityManagerFactory" ref="emf"/>
+</bean>
+```
+JpaTransactionManager를 사용하면 같은 DataSource를 공유하는 DAO 와 트랜잭션을 공유할 수도 있다.
+
+### EntityManager 와 JpaTemplate
+#### JpaTemplate
+#### EntityManager 와 @PersistenceUnit
+```java
+EntityManager em = entityManagerFactory.createEntityManager();
+em.getTransaction().begin();
+//작업 
+em.getTransaction().commit();
+```
+* @Autowired, @Resource 로 EntityManagerFactory DI
+* @PersistenctUnit
+```java
+@PersistenctUnit EntityManagerFactory emf;
+```
