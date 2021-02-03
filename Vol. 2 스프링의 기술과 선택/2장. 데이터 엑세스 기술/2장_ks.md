@@ -125,3 +125,62 @@ em.getTransaction().commit();
 ```java
 @PersistenctUnit EntityManagerFactory emf;
 ```
+
+
+#### 컨테이너 관리 EntityManager와 @PersistenceContext 
+@PersistenctContext를 사용하면 컨테이너가 사용하는 EntityManager를 직접 주입받을 수 있다. EntityManager는 빈으로 등록되지 않고 이를 생성하는 LocalContainerEntityManagerFactory이기 때문에 @Autowired같은 스프링의 di 방법으로는 주입받을 수 없고 @PersistenctContext를 사용한다.
+```java
+public class MemberDao {
+	@PersistenctContext EntityManager em;
+	public void addMember(Member member) {
+		em.persist(member)
+	}
+}
+```
+
+하지만 EntityManager를 생성하고 재사용하는 개념은 아니고 트랜잭션에 연결되는 퍼시스턴스 컨텍스트를 갖는 일종의 프록시를 주입받는다. 그래서 그 범위 안에서 존재하다가 제거된다. 트랜잭션마다 다른 EntityManager를 사용하게 된다.
+```java
+@PersistenceContext(type=PersistenceContextType.TRANSACTION) EntityManager em;
+```
+
+#### @PersistenctContext와 확장된 퍼시스턴스 컨텍스트 
+PersistenctContextType.EXTENDED로 지정하면 확장된 스코프를 가진 EntityManager가 만들어진다. 이는 상태유지 세션빈에 바인딩되어 사용자별로 독립적으로 만들어지고 장기간 보존된다. 
+
+#### JPA 예외 변환 
+자동으로 예외변환이 일어나지 않지만 런타임 예외를 발생시키기 때문에 불필요한 try/catch 블록은 필요없다.
+
+#### JPA 예외 변환 AOP
+JPA 예외를 스프링의 DataAccessException 예외로 전환시킬 수는 있다.
+##### @Repository 
+DAO 에 @Repository를 선언한다.
+##### PersistenceExceptionTranslationPostProcessor
+@Repository 가 붙은 빈을 찾아서 AOP 어드바이스를 적용시켜주는 후처리기가 필요한데 PersistenceExceptionTranslationPostProcessor 를 빈으로 등록해주면 된다.
+
+## 하이버네이트 
+ORM 프레임워크 중 가장 성공한 오픈소스. 
+### SessionFactory 등록 
+JPA 의 EntityManagerFactory 같은 SessionFactory가 있다. 
+#### LocalSessionFactoryBean 
+스프링이 제공하는 트랜잭션 매니저와 연동될 수 있도록 설정된 SessionFactory 생성 
+
+* mappingLocations : 매핑 파일 위치 
+* hibernateProperties : hibernate.cfg.xml 안의 설정값 
+
+#### AnnotationSessionFactoryBean 
+
+* annotatedClasses : 매핑 어노테이션이 부여된 클래스 목록 
+* packagesToScan : 자동 스캔 패키지 지정 
+
+#### 트랜잭션 매니저 
+##### HibernateTransactionManager 
+단일 DB에 JTA를 이용할 필요가 없다면 이 빈을 사용한다.
+
+##### JtaTransactionManager
+여러 DB에 대한 작업을 하나의 트랜잭션으로 묶으려면 JTA를 통해 글로벌 트랜잭션 기능을 사용해야 한다.
+
+### Session과 HibernateTemplate 
+Session은 SessionFactory로 부터 만들어지며 트랜잭션과 동일한 스코프를 갖는다.
+#### HibernateTemplate 
+스프링의 템플릿/콜백 패턴이 적용된다. 그다지 권장되지는 않는다.
+#### SessionFactory.getCurrentSession() 
+현재 트랜잭션이 연결되어있는 하이버네이트 Session을 돌려준다. 
