@@ -65,7 +65,7 @@
 
 #### 스프링 서블릿/MVC의 핵심 프론트 컨트롤러 => 디스패처 서블릿
 
-(그림 3-1)
+![이미지1](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.%202%20%EC%8A%A4%ED%94%84%EB%A7%81%EC%9D%98%20%EA%B8%B0%EC%88%A0%EA%B3%BC%20%EC%84%A0%ED%83%9D/3%EC%9E%A5.%20%EC%8A%A4%ED%94%84%EB%A7%81%20%EC%9B%B9%20%EA%B8%B0%EC%88%A0%EA%B3%BC%20%EC%8A%A4%ED%94%84%EB%A7%81%20MVC/3%EC%9E%A5_sh/%E1%84%80%E1%85%B3%E1%84%85%E1%85%B5%E1%86%B73-1.jpeg)
 
 1) HTTP 요청이 들어오고 / 이 요청이 스프링의 디스패처서블릿에 할당된 요청인지 서블릿컨테이너가 판단해서 / 맞으면 서블릿 컨테이너가 HTTP 요청정보를 디스패처 서블릿에 전달해준다. 
 
