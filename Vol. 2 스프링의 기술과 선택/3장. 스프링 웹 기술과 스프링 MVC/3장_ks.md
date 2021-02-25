@@ -47,3 +47,54 @@ DispatcherServlet은 다양한 전략을 DI로 구성해서 확장하도록 만�
 ##### LocalResolver
 ##### ThemeResolver
 ##### RequestToViewNameTranslator 
+
+## 스프링 웹 애플리케이션 환경 구성
+### 간단한 스프링 웹 프로젝트 생성
+#### 웹 애플리케이션 컨텍스트 구성방법
+##### 루트 웹 애플리케이션 컨텍스트
+/WEB-INF/applicationContext.xml 에 리스너를 이용해 등록
+```xml
+<listener>
+	<display-name>ContextLoader</display-name>
+	<listner-class>org.springframework.web.context.ContextLoaderListener</listenr-class>
+</listener>
+```
+##### 서블릿 웹 애플리케이션 컨텍스트
+```xml
+<servlet>
+	<servlet-name>sevletname</servlet-name>
+	<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+	<load-on-startup>1</load-on-startup>
+	//url 패턴도 지정 가능
+</servlet>
+```
+#### 스프링 웹 프로젝트 검증 
+* 핸들러 어댑터 : SimpleControllerHandlerAdapter
+* 핸들러 매핑 : BeanNameUrlHandlerMapping
+* 뷰 리졸버 : InternalResourceViewResolver
+
+### 스프링 웹 학습 테스트
+#### 서블릿 테스트용 목 오브젝트 
+```java
+MockHttpServletRequest req = new mockHttpServletRequest("GET", "/hello");
+req.addParameter("name","Spring");
+SimpleGetServlet servlet = new SimpleGetServlet();
+servlet.service(req, res);
+```
+* MockHttpServletRequest : 서블릿에 전달할 HttpServletRequest 타입의 요청정보
+* MockHttpServletResponse
+* MockHttpSession
+* MockServletConfig, MockServletContext
+
+#### DispatcherServlet 을 확장해서 테스트
+##### ConfigurableDispatcherServlet
+```java
+ConfigurableDispatcherServlet servlet = new ConfigurableDispatcherServlet();
+servlet.setRelativeLocations(getClass(), "spring-servlet.xml");
+```
+##### AbstactDispatcherServletTest 
+참고 리스트12-17
+
+## 컨트롤러
+### 컨트롤러의 종류와 핸들러 어댑터 
+#### Servlet과 SimpleServletHandlerAdapter
