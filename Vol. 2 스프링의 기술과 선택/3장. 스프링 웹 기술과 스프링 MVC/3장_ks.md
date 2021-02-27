@@ -98,3 +98,122 @@ servlet.setRelativeLocations(getClass(), "spring-servlet.xml");
 ## 컨트롤러
 ### 컨트롤러의 종류와 핸들러 어댑터 
 #### Servlet과 SimpleServletHandlerAdapter
+표준 서블릿. 서블릿을 컨트롤러로 사용했을 때 서블릿 클래스 코드를 그대로 유지하면서 스프링 빈으로 등록된다. 이러면 스프링 애플리케이션에 맞게 포팅할 수 있다. 
+```java
+//리스트 12-21
+setClasses(SimpleServletHandlerAdpter.class, HelloServlet.class); //핸들러 어댑터와 컨트롤러를 빈으로 등록해준다.
+```
+```xml
+<bean class=“org.springframework.web.servlet.handler.SimpleServletHandlerAdapter” />
+```
+이러면 DispatcherServlet이 자동으로 감지해 디폴트 핸들러 어댑터를 대신해서 사용한다.
+서블릿 타입의 컨트롤러는 모델과 뷰를 리턴하지 않는다.
+
+#### HttpRequestHandler와 HttpRequestHandlerAdapter
+Http 프로토콜을 기반으로 한 전용 서비스를 만들려고 할 때 사용한다.
+
+#### Controller와 SimpleConterollerHandlerAdapter
+어노테이션과 관례를 이용한 컨트롤러가 나오기 전까지 스프링 MVC 컨트롤러라고 하면 이를 의미했다.
+* synchronizeOnSession : Http 세션에 대한 동기화 여부 결정 
+* supportedMethods : 컨트롤러가 허용하는 Http 메소드를 지정할 수 있다.
+* useExpiresHeader, useCacheControllHeader, useCacheControlNoStore, cacheSeconds : Http헤더를 이용해서 브라우저의 캐시 설정 정보를 보내줄 것인지를 결정한다.
+
+```java
+public class HelloController extends SimpeController {
+	public HelloController() {
+		this.setRequiredParams(new Stringp[{“name”}];
+		this.setViewName(“/WEB-INF/view/hello.jsp”);
+	}
+}
+```
+
+```java
+public abstract class SimpleController implements Controller {
+	private String[] requiredParams;
+	private String viewName;
+	// setRequiredParams
+	//setViewName
+	final public ModelAndView handlerRequest(~) {
+		~
+	}
+	public abstract void control(Map~);
+}
+```
+
+#### AnnotationMethodHandlerAdapter
+클래스나 메소드에 붙은 애노테이션의 정보와 메소드 이름, 파라미터, 리턴 타입에 대한 규칙을 분석해서 컨트롤러를 선별하고 호출 방식을 결정한다.
+DefaultAnnotationHandlerMapping 과 함께 사용해야한다.
+
+### 핸들러 매핑 
+#### BeanNameUrlHandlerMapping
+url을 http 요청의 url과 비교해서 반환 
+#### ControllerBeanNameHandlerMapping
+빈의 아이디나 빈 이름을 이용해 매핑 
+#### ControllerClassNameHandlerMapping
+클래스 이름을 url에 매핑 
+#### SimpleUrlHandlerMapping
+url과 컨트롤러 매핑 정보를 한곳에 모아서 관리
+#### DefaultAnnotationHandlerMapping
+@RequestMapping 을 사용해서 클래스나 메소드에 직접 부여하고 매핑.
+#### 공통 설정 정보 
+* order : 두 개 이상의 핸들러 매핑을 적용했을 때 url 매핑정보가 중복되는 경우를 위해 지정하는 우선순위
+* defaultHandler : url을 매핑할 대상을 찾지 못했을 경우 자동으로 선택해준다.
+* alwaysUserFullPath : 보통은 url 을 상대경로 기준으로 사용하는데 full path 를 사용해야하는 경우 사용
+* detectHandlersInAncestorContexts : 핸들러 매핑 클래스는 루트가 아니라 현재 컨텍스트 안에서 매핑할 컨트롤러를 찾는다. 이 옵션이 true가 되면 루트에서도 찾게 된다.
+
+### 핸들러 인터셉터 
+DispatcherServlet이 컨트롤러를 호출하기 전과 후에 요청과 응답을 참조하거나 가공할 수 있는 일종의 필터.
+#### HandlerInterceptor
+* boolean preHandle : 컨트롤러가 호출되기 전에 실행 
+* void postHandler : 컨트롤러를 실행하고 난 후 호출 
+* void afterCompletion : 모든 뷰에서 최종 결과를 생성하는 일을 포함한 모든 작업이 완료된 후 실행 
+
+### 핸들러 입터셉터 적용 
+```xml
+<bean class=“org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping”>
+	<property name=“interceptors”>
+		<list>
+			<ref bean=“simpleInterceptor”/>
+			<ref bean==“eventInterceptor”/>
+		</list>
+	</property>
+</bean>
+```
+서블릿 필터와 핸들러 인터셉터는 하는일이 비슷하다.
+서블릿 필터는 web.xml에 별도로 등록해줘야하고 스프링의 빈이 아니다. 하지만 애플리케이션으로 들어오는 모든 요청에 적용된다.
+핸들러 인터셉터는 DispatcherServlet의 특정 핸들러 매핑으로 제한된다는 제약이 있지만 스프링의 빈으로 등록된다.
+
+### 컨트롤러 확장 
+#### 커스텀 컨트롤러 인터페이스와 핸들러 어댑터 개발 
+```java
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+public @interface ViewName{
+	String value();
+}
+
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+public @interface RequiredParams {
+	String[] value();
+}
+
+public class HelloController implements SimpleController {
+	@VuewName(“/WEB-INF/view/hello.jsp”)
+	@RequuiredParams({“name”})
+	public void control(Map~) {
+		model.put(“message”,”Hello”);
+	}
+}
+
+public class SimpleHandlerAdapter implements HandlerAdapter {
+~
+public ModelAndView handle(~) {
+	Method m=ReflectionUtils.findMethod(handler.getClass(), “control”, Map.class, Map.class);
+	ViewName viewName=AnnotationUtils.getAnnotation(m, viewName.class);
+	RequiredParams rp = AnnotationUtils.getAnnotation(m, RequiredParams.class);
+	~
+}
+}
+```
+핸들러 매핑에서 HelloController를 찾게 되면 DispatcherServlet은 현재 등록된 모든 핸들러 어댑터의 supports() 메소드를 호출해서 HelloController 타입을 처리할 수 있는지 물어보고 handler() 메소드를 호출해서 컨트롤러를 실행한다.
