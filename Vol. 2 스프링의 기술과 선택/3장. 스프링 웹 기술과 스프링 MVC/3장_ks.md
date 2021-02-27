@@ -217,3 +217,84 @@ public ModelAndView handle(~) {
 }
 ```
 핸들러 매핑에서 HelloController를 찾게 되면 DispatcherServlet은 현재 등록된 모든 핸들러 어댑터의 supports() 메소드를 호출해서 HelloController 타입을 처리할 수 있는지 물어보고 handler() 메소드를 호출해서 컨트롤러를 실행한다.
+## 뷰
+1. View Object 반환
+2. view 이름을 반환 - 뷰 리졸버 필요 
+
+### 뷰 
+#### InternalResourceView와 JstlView
+Jsp 서블릿을 통해 Jsp 뷰를 적용할 때 사용한다.
+```java
+req.setAttribute(“message”, message);
+req.getRequestDispatcher(“/WEB-INF/view/hello.jsp”).forward(req, res);
+```
+#### RedirectView
+URL만 만들어져 다른 페이지로 리다이렉트된다.
+```java
+return new ModelAndView(new RedirectView(“/main”));
+or
+return new ModelAndView(“redirect:/main”);
+```
+
+#### VelocityView, FreeMarkerView
+벨로시티와 프리마커라는 두 개의 대표적인 자바 템플릿 엔진을 뷰로 사용하게 해준다.
+#### MarshallingView
+OXM 추상화 기능을 활용해서 application/xml 타입의 콘텐트를 작성하게 해주는 뷰.
+```xml
+<bean id=“helloMarshallingView” class=“org.springframework.web.servlet.view.xml.MarshallingView”>
+<property name=“marshaller” ref=“marshaller”/>
+<property name=“modelKey” value=”info”/>
+</bean>
+```
+```java
+@Resource MashallingView helloMarshallingView;
+```
+#### AbstractExcelView, AbstractJExcepView, AbstractPdfView
+#### AbstractAtomFreeView, AbstractRssFeedView
+#### XsltView, TilesView, AbstractJasperReportsView
+#### MappingJacksonView 
+### 뷰 리졸버 
+#### InternalResourceViewResolver
+주로 Jsp를 뷰로 사용하고자 할 때 쓰인다.
+```xml
+<bean class=“org.springframework.web.servlet.view.InternalResourceViewResolver”>
+	<property name=“prefix” value=“/WEB-INF/view” />
+	<property name=“suffix” value=“.jsp”/>
+</bean>
+```
+#### VelocityViewResolver, FreeMarkerViewResolver
+#### ResourceBundleViewResolver, XmlViewResolver, BeanNameViewResolver
+```xml 
+//다중 뷰 리졸버 설정
+<bean class=“org.springframework.web.servlet.view.ResourceBundleViewResolver”>
+	<property name=“order value=“0”/>
+</bean>
+<bean class=“org.springframework.web.servlet.view.InternalResourceViewResolver” />
+```
+
+#### ContentNegotiaingViewResolver
+미디어타입 정보를 활용해 다른 뷰 리졸버에게 뷸ㄹ 찾도록 위임한 후에 선정해서 반환
+* 미디어 타입 결정 : HTTP 의 콘텐트 타입에 대응대는 값을 추출
+1. URL 확장자를 사용해서 미디어 타입 결정 
+2. 포맷을 지정하는 파라미터로부터 미디어타입 추출
+3. Accept 헤더 설정 이용해서 추출
+4. defaultContentType 프로퍼티에 설정해준 디폴트 미디어 타입 사용 
+* 뷰 리졸버 위임을 통한 후보 뷰 선정 
+* 미디어 타입 비교를 통한 최종 뷰 선정 
+## 기타 전략 
+### 핸들러 예외 리졸버 
+#### AnnotationMethodHandlerExceptionResolver
+#### ResponseStatusExceptionResolver : @ResponseStatus 설정
+#### DefaultHandlerExceptionResolver : 위의 두가지 예외 리졸버에서 처리하지 못하면 마지막으로 다룸
+#### SimpleMappingExceptionResolver 
+### 지역정보 리졸버
+http 헤더의 지역정보를 그대로 사용 
+### 멀티파트 리졸버 
+파일업로드할 때 처리. Commons > FileUpload 라이브러리를 사용하는 CommonsMultipartResolver 하나만 지원된다.
+```xml
+<bean id=“multipartResolver” class=“org.springframework.web.multipart.commons.CommonsMultipartResolver”>
+<property name=“maxUploadSize” value=“1000000”/>
+</bean>
+```
+#### RequestToViewNameTransalator
+컨트롤러에서 뷰 이름이나 뷰 오브젝트를 돌려주지 않았을 경우 http 요청정보를 참고해서 뷰 이름을 생성해준다.
