@@ -110,3 +110,172 @@
 > #### 디스패처서블릿은 각 전략의 디폴트 설정을 Dispatcher.properties라는 전략 설정파일에서 가져와서 초기화한다. 위 전략을 통해 디스패처서블릿의 동작방식을 확장 가능하다. 
 >
 > 디스패처서블릿은 서블릿컨테이너가 생성하고 관리하는 오브젝트이고 스프링의 컨텍스트에서 관리하는 빈 오브젝트가 아니다. 따라서 디스패처서블릿에 직접 DI설정은 할 수 없다. 대신 내부에 서블릿 웹 어플리케이션 컨텍스트를 갖고 있고 여기에 개발자가 전략을 추가하거나 설정을 수정한 빈 오브젝트를 담을 수 있다. 추가해준 빈이있으면 이것을 디폴트전략 대신 가져와서 사용한다. 
+> 
+<br/>
+
+서비스계층이나 데이터액세스계층은 독립적으로 만들어져서 테스트환경에서 쉽게 실행이 가능하지만, 
+
+웹 계층의 경우에는, 서버에 배치하고 클라이언트를 통해 접근할 수 있는 환경을 구성해야 정확한 테스트가 가능하다.
+
+<br/>
+
+## 웹 계층을 테스트하기 위한 환경을 준비해보기
+
+### STS을 사용해서 스프링 웹프로젝트를 생성하는 두 가지 방법
+
+1. Spring MVC Project 선택하기
+
+   -스프링 MVC 템플릿 생성됨
+
+   -빌드방식은 메이븐 사용
+
+   생소한 설정방식과 템플릿 때문에 초보자는 어려울 수 있음
+
+2. Dynamic Web Project 선택하기
+
+   -기본 웹 프로젝트 생성
+
+   -필요한 라이브러리 직접 추가
+
+   -필요한 설정파일 직접 작성 : web.xml과 스프링 설정파일을 직접 작성해줘야 한다
+
+   -번거롭지만 초보자의 경우 도움 많이 됨
+
+<br/>
+
+### Dynamic Web Project를 선택해서 웹 프로젝트 만들어보기
+
+> #### 전제조건
+>
+> - 필요한 런타임 라이브러리 jar 파일은 WebContent/WEB-INF/lib에 추가
+> - 웹 어플리케이션의 컨텍스트를 구성하는 방법 중. 루트컨텍스트와 서블릿컨텍스트를 사용하는 방법 선택
+>   - (!) 서블릿컨텍스트가 루트컨텍스트를 부모로 가지고 / 자식컨텍스트는 부모컨텍스트를 참조할 수는 있지만 그 반대는 불가능하다. 
+
+<br/>
+
+#### [1] 루트 컨텍스트와 서블릿 컨텍스트를 web.xml을 사용해서 등록한다.
+
+- 루트컨텍스트 등록
+
+  ```
+  <listener>
+  	<display-name>ContextLoader</display-name>
+  	<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+  </listener>
+  ```
+
+  - web.xml에 리스너를 등록하면 루트컨텍스트가 생성됨
+
+  - 디폴트 설정파일은 "/WEB-INF/applicationContext.xml" 
+
+    - 웹 환경과 직접관련이 없는 모든 빈은 여기에 등록된다 (서비스계층 + 데이터액세스계층)
+    - (!) STS 사용 시 [File] > [New] > [new Spring Bean Definition File]로 생성가능
+    - 보편적 경로: WebContent/WEB-INF/applicationContext.xml
+      - WebContent 폴더 = 웹루트
+
+  - 루트 컨텍스트가 제대로 등록됐는 지 테스트하려면?
+
+    - 컨트롤러 하나 생성해서 applicationContext.xml에 빈으로 등록해주고
+
+      ```
+      <bean id="helloString" class="com.sh.HelloSpring" />
+      ```
+
+    - "JSP 모델 1" 방식을 사용해서 테스트할 수 있음 (hellospring.jsp)
+
+      ```
+      ...
+      <%@page import="org.springframework.context.ApplicationContext" %>
+      <$@page import="org.springframework.web.context.support.WebApplicationContextUtils"%>
+      <$@page import="com.sh.HelloSpring"%>
+      
+      <html>
+      ...
+      <body>
+      <%
+      	ApplicationContext context = WebApplicationContextUtils.getWebApplicationContext(request.getSession.getServletContext()); 
+      	HelloSpring helloSpring = context.getBean(HelloSpring.class); 
+      	out.println(helloSpring.sayHello("Test!"));
+      %>
+      </body>
+      </html>
+      ```
+
+      - 스프링 MVC 외의 웹 기술에서 스프링의 애플리케이션 컨텍스트를 사용하려면 'WebApplicationContextUtils'를 이용하면 된다. 
+
+    - STS의 [Run] > [Run As]  하면 STS에 포함된 SpringSource tcServer를 통해 간단한 배치와 서버 구동까지 할 수 있다. 웹 브라우저에 /hellospring.jsp 입력해서 확인
+
+  <br/>
+
+- 서블릿 컨텍스트 등록
+
+  ```
+  <servlet>
+  	<servlet-name>spring</servlet-name>
+  	<servlet-class>org.springframework.web.servlet.DispatcherServlce</servlet-class>
+  	<load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+  	<servlet-name>spring</servlet-name>
+  	<url-pattern>/app/*</url-pattern>
+  <servlet-mapping>
+  ```
+
+  - web.xml에 DispatcherServlet 서블릿을 추가해서 서블릿 컨텍스트를 등록한다. 
+
+    - DispatcherServlet이 담당할 HTTP 요청의 URL 패턴을 지정해준다. 
+    - 이렇게 등록되면, DispatcherServlet은 초기화 시에 서블릿 수준의 웹 애플리케이션 컨텍스트를 생성해준다. 
+    - 서블릿 컨텍스트가 사용할 설정파일명은 "-servlet.xml"
+    - 웹루트/WEB-INF 아래에 -servlet.xml 만들어두면 DispatcherServlet의 내부에 생성되는 서블릿 컨텍스트가 이 파일을 사용해서 컨텍스트를 초기화해준다. 
+
+  - 디스패처서블릿과 그 내부의 서블릿 컨텍스트가 제대로 동작하는 지 확인할 수 있는 MVC 코드를 작성한다. (스프링 MVC를 사용하려면 디스패처서블릿 전략을 선택하고 그에 맞는 코드를 작성해야 함)
+
+    - 디폴트전략 사용해보기 (컨트롤러: 디폴트전략에서 지원하는 컨트롤러 타입 사용. 뷰: 디폴트 전략에서 지원하는 JSP 사용)
+
+      - 디폴트 핸들러어댑터: SimpleControllerHandlerAdapter
+
+      ```
+      public interface Controller {
+      	ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception; 
+      }
+      ```
+
+      ```
+      public class HelloController implements Controller {
+      	@Autowired HelloSpring helloSpring; 
+      	
+      	public ModelAndView handleRequest(HttpServletRquest req, HttpServletResponse res) throws Exception {
+      		String name = req.getParameter("name"); 
+      		String message = this.helloSpring.sayHello(name); 
+      		
+      		Map<String, Object> model = new HashMap<String, Object>(); 
+      		model.put("message", message); 
+      		
+      		return new MedelAndView("/WEB-INF/view/hello.jsp", model); 
+      	}
+      }
+      ```
+
+      ​		- HelloController의 handleRequest()는 Controller 타입 핸들러를 담당하는 SimpleControllerhandlerAdapter를 통해 디스패처서블릿으로부터 호출된다. 
+
+      - 서블릿 컨텍스트가 사용할 설정파일 "spring-servlet.xml" 안에 HelloController 빈을 등록한다.
+
+        ```
+        <context:annotation-config />
+        <bean name="/hello" class="com.sh.HelloController" />
+        ```
+
+        - 실제로는 /app/hello에 매핑됨
+
+      - 디폴트 뷰 리졸버 InternalResourceViewResolver를 사용한다. 컨트롤러가 리턴한 뷰 이름을 참고해서 JSP와 서블릿을 템플릿으로 사용하는 InternalResourceView를 돌려준다. 
+
+        ```
+        <html>
+        <head>...</head>
+        <body>
+        	${message}
+        </body>
+        </html>
+        ```
+
+      - http://localhost:8080/shproj/app/hello?name=seok 요청해서 확인
