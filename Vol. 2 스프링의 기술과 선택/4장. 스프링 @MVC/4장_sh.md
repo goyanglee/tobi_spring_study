@@ -207,7 +207,6 @@ public class SHController {
     - 전자는, 요청파라미터를 메소드파라미터에서 1:1로 받는 것
     - 후자는, 요청 파라미터를 도메인오브젝트나 DTO 프로퍼티에 바인딩해서 한 번에 받는 것
 
-  - Errors, BindingRequest
 
    
 
