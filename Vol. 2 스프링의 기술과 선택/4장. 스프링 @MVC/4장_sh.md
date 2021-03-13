@@ -117,6 +117,97 @@ public class SHController {
 ```
 
 <br/>
+### @Controller의 메소드 파라미터
 
+- HttpServletRequest, HttpServletResponse
+
+- HttpSession
+
+  - HttpServletRequest에서 가져올 수도 있음. 세션만 필요한 경우에는 직접 선언해서 사용하는 것이 좋음
+  - 서버에 따라 멀티스레드 안정성이 보장되지 않을 수 있음. 서버 상관없이 안전성을 위해 핸들러어댑터의 "synchronizeOnSession"을 "true"로 설정해줘야한다. 
+
+- WebRequest, NativeWebRequest
+
+  - WebRequest : HttpServletRequest의 요청정보 대부분을 그대로 갖고 있음 (스프링 서블릿/MVC의 컨트롤러에서 필수적인 것은 아니다)
+  - NativeWebRequest : WebRequest 내부에 감춰진 HttpServletRequest와 같은 환경종속적인 오브젝트를 가져올 수 있는 메소드가 포함되어있음
+
+- Locale
+
+  - DispatcherServlet의 지역정보 리졸버가 결정한 Locale 오브젝트를 받을 수 있음
+
+- InputStream, Reader
+
+- OutputStream, Writer
+
+- @PathVariable
+
+- @RequestParam
+
+  - 파라미터 이름을 지정하지않고 Map<String, String> 타입으로 선언하면 모든 요청 파라미터를 담은 맵으로 받을 수 있다. 
+
+    ```
+    public String add(@RequestParam Map<String, String> params) { ... }
+    ```
+
+  - 파라미터가 선언되어있으면 무조건 값이 넘어와야한다. 안넘어오면 400에러 발생됨. 선택적으로 제공하게 하려면 "required" 옵션 사용
+
+    ```
+    public void view(@RequestParam(value="id", required=false, defaultValue="-1") int id) { ... }
+    ```
+
+  - 메소드 파라미터의 이름과 요청파라미터 이름이 일치한다면 @RequestParam의 이름을 생략할 수도 있다. 하지만, 파라미터가 많아지면 명시적으로 이름을 사용하는 것을 권장.
+
+    ```
+    public String view(@RequestParam int id) { ... }
+    ```
+
+- @CookieValue
+
+  - HTTP 요청과 함께 전달된 쿠키 값을 메소드 파라미터에 넣어줄 수 있다. 쿠키이름을 넣어줌. 이 때도 쿠키이름과 메소드 파라미터 이름이 동일하면 쿠키이름은 생략가능
+
+    ```
+    public String check(@CookieValue("auth") String auth) { ... }
+    ```
+
+  - 선언되었으면 쿠키값이 반드시 존재해야 한다. 선택적으로 제공하려면 "reqired" 옵션사용
+
+    ```
+    public String check(@CookieValue(value="auth", required=false, defaultValue="NONE") String auth) { ... }
+    ```
+
+    - 쿠키값 없을때는 "NONE"으로 설정
+
+- @RequestHeader
+
+  ```
+  public void header(@RequestHeader("Host") String host, @RequestHeader("Keep-Alive") long keepAlive)
+  ```
+
+  - 헤더도 선언했으면 반드시 존재해야한다. 
+
+- Map, Model, ModelMap
+
+  - Java.util.Map / org.springframework.ui.Model / org.springframework.ui.ModelMap
+  - Model과 ModelMap은 모두 addAttribute() 메소드를 제공한다. 
+
+- @ModelAttribute
+
+  - 모델 맵에 담겨서 뷰에 전달되는 모델 오브젝트의 하나로 별도 설정없이도 자동으로 뷰에 전달된다. 
+
+    > (*) 
+    >
+    > 컨트롤러가 사용하는 모델 중에는 "클라이언트로부터 받는 HTTP 요청정보를 이욯해서 생성되는 것"이 있다. 웹 페이지 폼처럼 컨트롤러가 받아서 내부 로직에서 사용하고 필요에 따라 다시 화면에 출력하기도하는 케이스. 
+    >
+    > 이렇게 클라이언트로부터 컨트롤러가 받는 요청정보 중 하나 이상의 값을 가진 오브젝트 형태로 만들 수 있는 구조적인 정보를 @ModelAttribute라고 부른다. 즉, 컨트롤러가 전달받은 오브젝트 형태의 정보를 의미한다. 
+
+  - @RequestParam을 사용하는 것과 @ModelAttribute를 사용하는 것?
+
+    - 정보의 종류가 다른것은 아님
+    - 전자는, 요청파라미터를 메소드파라미터에서 1:1로 받는 것
+    - 후자는, 요청 파라미터를 도메인오브젝트나 DTO 프로퍼티에 바인딩해서 한 번에 받는 것
+
+  - Errors, BindingRequest
+
+   
 
 
