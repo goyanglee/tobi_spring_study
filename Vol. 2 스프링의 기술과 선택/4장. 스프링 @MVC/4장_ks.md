@@ -92,3 +92,5 @@ public abstract class GenericController<T,K,S> {
 }
 ```
 개별 컨트롤러는 GenericController를 상속해서 만들면 된다.
+@ModelAttribute가 붙은 파라미터 타입의 오브젝트에 모두 담아서 전달해주는 것을 커맨드라고 부른다. 웹페이지의 폼 내용을 받을 때에도 @ModelAttribute를 사용한다. 
+@ModelAttribute도 생략 가능하다. 이는 String, int 등은 @RequestParam으로 보고 복잡한 오브젝트는 ModelAttribute가 생략되었다고 간주한다. 그러나 명시적으로 작성해주는 것을 지향한다.
