@@ -297,7 +297,7 @@ messages.properties에 설정
 LocaleResolver에 의해 결정된 현재의 지역정보를 이용한다. Locale.KOREAN 지역에서는 messages_ko.properties를 찾게 된다. 
 ### 모델의 라이프 사이클 
 #### HTTP 요청으로부터 컨트롤러 메소드까지
-!(http-controller)[https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.%202%20스프링의%20기술과%20선택/4장.%20스프링%20%40MVC/4장_ks/79DBCF0D-03D8-4507-9694-A56A462EB624.jpeg]
+![http-controller](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.%202%20스프링의%20기술과%20선택/4장.%20스프링%20%40MVC/4장_ks/79DBCF0D-03D8-4507-9694-A56A462EB624.jpeg)
 1. @ModelAttribute 로 파라미터 가져오기 
 2. @SessionAttribute 세션 확인 
 3. WebDataBinder 에 등록된 변환 기능으로 타입 변환 
@@ -305,7 +305,7 @@ LocaleResolver에 의해 결정된 현재의 지역정보를 이용한다. Local
 5. ModelAndView 의 모델 맵. 임시 모델 맵에 저장되어 DispatcherServlet으로 전달 
 6. 파라미터가 전달되어 컨트롤러 메소드 실행 
 #### 컨트롤러 메소드로부터 뷰까지 
-!(controller-view)[https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.%202%20스프링의%20기술과%20선택/4장.%20스프링%20%40MVC/4장_ks/22FA04D4-1C39-426E-A417-4C6E627AE483.jpeg]
+![controller-view](https://github.com/goyanglee/tobi_spring_study/blob/master/Vol.%202%20스프링의%20기술과%20선택/4장.%20스프링%20%40MVC/4장_ks/22FA04D4-1C39-426E-A417-4C6E627AE483.jpeg)
 1. DispatcherServlet이 ModelAndView 을 받는다.
 2. WebDataBinder에 등록되어있는 MessageCodeResolver가 메시지 코드 후보 목록을 만든다. 
 3. 빈으로 등록된 MessageSource와 LocaleResolver : 최종 출력할 에러 메시지를 결정한다. 
