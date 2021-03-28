@@ -207,7 +207,34 @@ public class SHController {
     - 전자는, 요청파라미터를 메소드파라미터에서 1:1로 받는 것
     - 후자는, 요청 파라미터를 도메인오브젝트나 DTO 프로퍼티에 바인딩해서 한 번에 받는 것
 
+- BindingResult, Errors
 
+  - @ModelAttribute를 통해 폼의 정보를 전달받을 때 함께 사용해야 한다. 
+  - (주의할 점) 이 두가지 타입의 파라미터는 반드시 @ModelAttribute 파라미터 뒤에 작성해야 한다. 바로 앞에 있는 @ModelAttribute 파라미터의 검증작업에서 발생한 오류만을 전달해주기 때문이다. 
+
+- SessionStatus
+
+  - 모델 오브젝트를 세션에 저장했다가 다음 페이지에서 다시 활용 가능
+
+- @RequestBody
+
+  - HTTP 요청의 body 부분이 그대로 전달된다. 
+  - XML이나 JSON 기반의 메시지를 사용하는 요청에서 유용 
+  - 보통 @ResponseBody와 함께 사용
+
+- @Value
+
+  - 주로 시스템 프로퍼티나 다른 빈의 프로퍼티 값, 또는 좀 더 복잡한 SqEL을 이용해 클래스의 상수를 읽어오거나 특정 메소드를 호출한 결과 값, 조건식 등을 넣을 수 있다. 
+
+    ```
+    @RequestMapping(...)
+    public String hello(@Value("#{systemProperties['os.name']}") String osName)
+    { ... }
+    ```
+
+- @Valid 
+
+  - JSR-303의 빈 검증기를 이용해서 모델 오브젝트를 검증하도록 지시하는 지시자
    
 
 
