@@ -311,3 +311,126 @@ LocaleResolver에 의해 결정된 현재의 지역정보를 이용한다. Local
 3. 빈으로 등록된 MessageSource와 LocaleResolver : 최종 출력할 에러 메시지를 결정한다. 
 4. @SessionAttribute로 지정한 이름과 일치하는 게 있다면 HTTP 세션에 저장된다. 
 5. 뷰의 EL 과 스프링 태그 또는 매크로 : 뷰의 표현식 언어(EL)로 참조되어 콘텐츠에 포함되어 출력된다. 
+
+## JSP 뷰와 form 태그 
+### EL 과 spring 태그 라이브러리를 이용한 모델 출력 
+#### JSP EL 
+JSP 뷰에서 모델 맵에 담긴 오브젝트를 접근하게 해준다. 
+```xml
+<div>이름 : ${name}</div>
+```
+fmt태그를 사용하거나 <c:if> 를 이용한 조건식에 사용할 수 있다. 
+#### SpEL 
+EL보다 강력한 표현식을 제공한다. 
+```xml
+<%@ taglib prefix=“spring” uri=“http://www.springframework.org/tags” %> 
+// 태그 라이브러리를 추가 
+<spring:eval expression=“user.name”/>
+```
+```java
+@NumberFormat(pattern=“###, ##0”)
+Integer point;
+```
+#### 지역화 메시지 출력 
+```
+greeting=Hello {0}!
+```
+### spring 태그 라이브러리를 이용한 폼 작성 
+#### 단일 폼 모델 
+##### 빈 폼에 입력을 받아 저장하는 폼 
+##### 처음에 폼 내용이 출력되고 이를 수정해서 저장하는 폼 
+#### <spring:bind> 와 BindingStatus 
+EL을 사용하면 한계가 있다. 
+1. 바인딩 오류 시 에러메시지 출력 불가 
+2. 바인딩 작업 중 타입 변환 오류가 나는 경우에 잘못 입력한 값을 출력할 수 없다. 
+<spring:bind> 태그를 제공한다.
+```xml
+<spring:bind path=“user.name”>
+	<input type=“text” id=“${status.expression}” name=“$status.expression}” value=“$status.value}”/>
+	<span class=“errorMessage”>
+		<c:forEach var=“errorMessage” items=“${status.errorMessage}”>${errorMessage}</forEach>
+	</span>
+</spring:bind>
+```
+프로퍼티 
+1. expression
+2. value
+3. errorMessages
+4. errorMessage
+5. errors 
+### form 태그 라이브러리 
+bind 와 기능이 동일하지만 간결한 코드로 만들 수 있다. 단, html 코드를 직접 사용하지 못한다. 
+```xml
+<%@ taglib prefix=“form” uri=“http://www.springframework.org/form” %> 
+```
+#### <form:form> 
+1. commandName, modelAttribute 
+2. method
+3. action: url 지정 
+#### <form:input>
+1. path : id 를 따로 지정하지 않으면 <input> 의 id, name에 할당된다. 
+2. cssClass, cssErrorClass : <input> 의 class 애트리뷰트 지정 
+#### <form:label> 
+#### <form:errors>
+1. path : 생략가능 
+2. delimiter
+3. cssClass
+4. 일괄출력 
+#### <form:hidden>
+#### <form:password>, <form:textarea> 
+#### <form:checkbox>, <form:checkboxes>
+체크박스 생성 
+#### <form:radiobuddon>, <form:radioButtons>
+#### <form:select>,<form:option>,<form:options>
+#### 커스텀 UI 태그 만들기 
+```xml
+<ui:text path=“name” label=“Name” size=“20” />
+```
+## 메시지 컨버터와 AJAX 
+### 메시지 컨버터 종류 
+#### ByteArrayHttpMessageConverter 
+미디어 타입 모든 것을 지원 
+#### StringHttpMessageConverter 
+미디어 타입 모든 것을 지원. 본문을 그대로 string 으로 가져온다. 
+#### FormHttpMessageConverter 
+application/x-www-form-urlencoded 로 정의된 폼 데이터를 받는다. <MultiValueMap<String, String> 을 지원한다. 
+#### SourceHttpMessageConverter 
+application/xml, application/*+xml, text/xml 을 지원. DOMSource, SAXSource, StreamSource 를 지원 
+#### Jaxb2RootElementHttpMessageConverter 
+@XmlRootElement, @XmlType이 붙은 클래스를 사용 
+#### MarshallingHttpMessageConverter 
+xml 문서와 자바 오브젝트 변환 
+#### MappingJacksonHttpMessageConverter 
+java - json 자동 변환 
+### Json 을 이용한 Ajax 컨트롤러 : GET + JSON 
+```java
+@RequestMapping(value=“checkloginid/{loginId}”, method=RequestMethod.GET)
+@ResponseBody 
+public Result checklogin(){}
+```
+### Json 을 이용한 Ajax 컨트롤러 : POST + JSON 
+```javascript
+~
+$.postJSON(“register”, user, function(user) {~}
+```
+## MVC 네임스페이스 
+### <mvc:annotation-driven> 
+1. DefaultAnnotationHandlerMapping 
+2. AnnotationMethodHandlerAdapter : 디폴트 핸들러 어댑터 
+3. ConfigurableWebBindingInitializer 
+4. 메시지 컨버터 
+5. <spring:eval> 을 위한 컨버전 서비스 노출용 인터셉터 
+6. validator 
+7. conversion-service 
+8. <mvc:interceptors>
+	1. 핸들러 매핑 빈의 interceptors 프로퍼티를 이용해 등록
+	2. <mvc:interceptors> 이용 
+9. <mvc:view-controller> 
+## @MVC 확장 포인트 
+### AnnotationMethodHandlerAdapter 
+#### SessionAttributeStore 
+자동으로 HTTP 세션에 저장됐다가 다음 요청에서 사용한다. 
+#### WebArgumentResolver 
+특화된 컨트롤러 파라미터 타입을 추가할 수 있다. 
+#### ModelAndViewResolver 
+컨트롤러 메소드의 리턴 타입과 메소드 정보, 어노테이션 정보등을 참고해서 ModelAndView 생성
